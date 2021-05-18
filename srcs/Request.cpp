@@ -103,6 +103,11 @@ const std::string&	Request::getUserAgent(void) const
 	return (this->user_agent);
 }
 
+void 	Request::setUri(const std::string &uri)
+{
+	this->uri = uri;
+}
+
 void	Request::setRawRequest(const std::string& raw_request)
 {
 	this->raw_request = raw_request;

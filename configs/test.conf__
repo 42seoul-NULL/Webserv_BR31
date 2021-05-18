@@ -7,19 +7,24 @@ server
 	server_name default_server
 	listen 8180 127.0.0.1			# 7번라인 8번라인 반드시 연달아와야합니다.
 
-	location /					# / 로케이션은 반드시 존재해야합니다. (디폴트서버)
+	location /						# / 로케이션은 반드시 존재해야합니다. (디폴트서버)
 	{
-		allow_methods GET
-		root ./tester/YoupiBanane/
-		index youpi.bad_extension
+		error_page 404 ./tests/www/error404.html
+		error_page 405 ./tests/www/error405.html
+		allow_methods GET POST
+		request_max_body_size	2048
+		root ./tests/www/
+		index index.html index2.html
+		auto_index on
+		cgi_extension .bla
 	}
 
 	location /2/ 
 	{
-		allow_methods GET
 		root ./tests/www/
 		index second.html
 		auto_index on
+		auth_key juyang:1234
 	}
 
 	location /virtual/

@@ -13,11 +13,20 @@ int		Response::makeGetBody(const Request& request, Location &location, int clien
 	size_t idx;
 
 	std::string absol_path(location.getRoot());
-	if (request.getUri() != location.getUriKey()) // 다르다. (완벽하게 처리된게 아니다. 뒤에 더해줘야한다.)
-	{
-		absol_path.erase(--(absol_path.end()));
-		absol_path += request.getUri();
-	}
+	// if ((request.getUri() != location.getUriKey()) && ( *(--request.getUri().end()) == '/' )) // 다르면서 디렉토리다 (완벽하게 처리된게 아니다. 뒤에 더해줘야한다.)
+	// {
+	// 	absol_path.erase(--(absol_path.end()));
+	// 	absol_path += request.getUri();
+	// }
+
+	for (int i = location.getUriKey().size(); i < request.getUri().size(); i++)
+		absol_path += request.getUri()[i];
+
+
+	std::cout << request.getUri() << std::endl;
+	std::cout << location.getUriKey() << std::endl;
+	std::cout << absol_path << std::endl;
+
 
 	if (isDirectory(absol_path))
 	{

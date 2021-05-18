@@ -36,7 +36,7 @@ class Nginx
 
 		void	clear_connected_socket(Fdmanager * fdmanager);
 		void 	insert_pull(Fdmanager *fdmanager);
-		Location &getPerfectLocation(int server_socket_fd, const std::string &uri);
+		Location &getPerfectLocation(int server_socket_fd, Request		&request);
 
 		std::vector<Fdmanager *>  & getFds();
 		

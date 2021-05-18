@@ -69,14 +69,14 @@ void	Nginx::insert_pull(Fdmanager *fdmanager) // 이미 new 가 되어 들어온
 	}
 }
 
-Location &Nginx::getPerfectLocation(int server_socket_fd, const std::string &uri)
+Location &Nginx::getPerfectLocation(int server_socket_fd, Request & request)
 {
 	Server *target_server = dynamic_cast<Server *>(this->fds[server_socket_fd]);
 	std::map<std::string, Location> *locs = &(target_server->getLocations());
 
 	Location *ret = &((*locs)["/"]);
 	std::string key = "";
-	for (std::string::const_iterator iter = uri.begin(); iter != uri.end(); iter++)
+	for (std::string::const_iterator iter = request.getUri().begin(); iter != request.getUri().end(); iter++)
 	{
 		key += *iter;
 		if (*iter == '/')
@@ -85,6 +85,15 @@ Location &Nginx::getPerfectLocation(int server_socket_fd, const std::string &uri
 				return (*ret);
 			else
 				ret = &((*locs)[key]);
+		}
+	}
+	if ( *(--key.end()) != '/') // '/'로 끝나지 않았고
+	{
+		key += '/';
+		if (locs->find(key) != locs->end())
+		{
+			request.setUri(key);
+			return (*locs)[key];
 		}
 	}
 	return (*ret);
@@ -189,9 +198,9 @@ bool	Nginx::run(struct timeval	timeout, unsigned int buffer_size)
 						client->getRequest().getRawRequest() += buf; // 무조건 더한다. (다음 리퀘스트가 미리 와있을 수 있다.)
 						std::cout << buf; ///////////////////////////////
 
-						if (client->getStatus() == REQUEST_RECEIVING && client->getRequest().tryMakeRequest() == true)
+						if ((client->getStatus() == REQUEST_RECEIVING) && (client->getRequest().tryMakeRequest() == true))
 						{
-							client->getResponse().makeResponse(client->getRequest(), getPerfectLocation(client->getServerSocketFd(), client->getRequest().getUri() ), i);
+							client->getResponse().makeResponse(client->getRequest(), getPerfectLocation(client->getServerSocketFd(), client->getRequest() ), i);
 							client->getRequest().initRequest();
 						}
 					}
