@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Response.cpp                                       :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: honlee <honlee@student.42.fr>              +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/05/12 16:40:53 by juyang            #+#    #+#             */
-/*   Updated: 2021/05/18 10:58:54 by honlee           ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "../includes/parser.hpp"
 #include "../includes/Response.hpp"
 
@@ -132,7 +120,6 @@ int		Response::checkAuth(const Request &request, Location &location)
 {
 	if (location.getAuthKey() == "")
 		return (200);
-
 	char result[200];
 	ft_memset(result, 0, 200);
 	size_t idx = request.getAuthorization().find_first_of(' ');
@@ -259,7 +246,6 @@ int		Response::makeDate(const Request& request)
 
 int		Response::makeLastModified(const Request& request, Location &location)
 {
-	int fd;
 	struct stat	sb;
 	struct tm*	timeinfo;
 	char buffer[4096];
@@ -274,7 +260,6 @@ int		Response::makeLastModified(const Request& request, Location &location)
 	timeinfo = localtime(&sb.st_mtime);
 	strftime(buffer, 4096, "%a, %d %b %Y %H:%M:%S GMT", timeinfo); // 연도 잘 안나옴
 	this->raw_response += "Last-Modified: " + std::string(buffer) + "\r\n";
-	close(fd);
 	return (200);
 }
 
@@ -315,7 +300,7 @@ int		Response::makeFirstLine(int code)
 	return (code);
 }
 
-int		Response::makeAutoIndexPage(const Request& request, Location& location, const std::string &path)
+int		Response::makeAutoIndexPage(const Request& request, const std::string &path)
 {
 	initResponse();
 
@@ -376,6 +361,9 @@ int		Response::makeBody(const Request& request, Location &location)
 
 	if (isDirectory(absol_path))
 	{
+		if ( *(--absol_path.end()) != '/')
+			absol_path += '/';
+
 		bool is_exist = false;
 		std::string temp_path;
 		for (std::list<std::string>::iterator iter = location.getIndex().begin(); iter != location.getIndex().end(); iter++)
@@ -385,7 +373,7 @@ int		Response::makeBody(const Request& request, Location &location)
 				break ;
 		}
 		if (is_exist == false && location.getAutoIndex())
-			return (makeAutoIndexPage(request, location, absol_path));
+			return (makeAutoIndexPage(request, absol_path));
 		absol_path = temp_path;
 	}
 	if (!isExist(absol_path))
@@ -428,10 +416,10 @@ int		Response::makeBody(const Request& request, Location &location)
 int		Response::makeRedirectionResponse(const Request& request, Location& location)
 {
 	int ret;
-
+	initResponse();
 	if (
 			(ret = checkAuth(request, location)) != 200 ||
-			(ret = makeFirstLine(location.getRedirectReturn())) != 200 ||
+			(ret = makeFirstLine(location.getRedirectReturn())) != location.getRedirectReturn() ||
 			(ret = makeDate(request)) != 200 ||
 			(ret = makeServer()) != 200 ||
 			(ret = makeLocation(location)) != 200
@@ -447,18 +435,11 @@ int		Response::makeResponse(const Request& request, Location &location)
 {
 	int ret;
 
-	if (location.getRedirectReturn() != -1) // 리다이렉션 하는 location 이라면
-	{
-		//리다이렉션 작업해줘야함.
-	}
+	if (location.getRedirectReturn() != -1)
+		return (this->last_reponse = makeRedirectionResponse(request, location));
+
 	if (request.getMethod() == "GET" || request.getMethod() == "HEAD")
 	{
-		//   first line :  GET /index/hello 1.1
-		if (location.getRedirectReturn() != 0)
-		{
-			return (this->last_reponse = 301);
-		}
-
 		if (
 				(ret = checkAuth(request, location)) != 200 ||
 				(ret = makeFirstLine(200)) != 200 ||

@@ -33,13 +33,12 @@ Location &Nginx::getPerfectLocation(int server_socket_fd, const std::string &ser
 {
 	std::map<std::string, Location> *locs;
 
-
 	if (this->servers[server_socket_fd].find(server_name) == this->servers[server_socket_fd].end()) // 못찾으면
 		locs = &(this->servers[server_socket_fd].begin()->second.getLocations());
 	else
 		locs = &(this->servers[server_socket_fd][server_name].getLocations());
 
-	Location &ret = (*locs)["/"];
+	Location *ret = &((*locs)["/"]);
 
 	std::string key = "";
 	for (std::string::const_iterator iter = uri.begin(); iter != uri.end(); iter++)
@@ -48,12 +47,12 @@ Location &Nginx::getPerfectLocation(int server_socket_fd, const std::string &ser
 		if (*iter == '/')
 		{
 			if (locs->find(key) == locs->end())
-				return (ret);
+				return (*ret);
 			else
-				ret = (*locs)[key];
+				ret = &((*locs)[key]);
 		}
 	}
-	return (ret);
+	return (*ret);
 }
 
 bool	Nginx::initServers(int queue_size)
@@ -163,6 +162,7 @@ bool	Nginx::run(struct timeval	timeout, unsigned int buffer_size)
 						is_readable = true;
 						buf[len] = 0;
 						this->clients[i].getRequest().getRawRequest() += buf; // 무조건 더한다. (다음 리퀘스트가 미리 와있을 수 있다.)
+						std::cout << buf; ///////////////////////////////
 					}
 					if (this->clients[i].getStatus() == REQUEST_RECEIVING && clients[i].getRequest().tryMakeRequest() == true)
 					{
@@ -173,7 +173,8 @@ bool	Nginx::run(struct timeval	timeout, unsigned int buffer_size)
 						this->clients[i].getResponse().makeResponse(this->clients[i].getRequest(), getPerfectLocation(this->clients[i].getServerSocketFd(), _server_name, this->clients[i].getRequest().getUri() ));
 						this->clients[i].getRequest().initRequest();
 						this->clients[i].setStatus(RESPONSE_READY);
-						std::cout << clients[i].getResponse().getRawResponse() << std::endl;
+						std::cout << std::endl; /////////////////////////////////////
+						std::cout << clients[i].getResponse().getRawResponse() << std::endl; //////////////////////////////
 					}
 					if (is_readable == false)
 					{
