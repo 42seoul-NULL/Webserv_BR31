@@ -136,6 +136,8 @@ Config::Config()
 	this->status_code["510"] = "Not Extened";
 	this->status_code["511"] = "Network Authentication Required";
 	this->status_code["599"] = "Network Connect Timeout Error";
+
+	this->nginx = NULL;
 }
 
 Config::Config(const Config &src)
@@ -160,6 +162,18 @@ Config *Config::getInstance()
 	if (instance == NULL)
 		instance = new Config();
 	return (instance);
+}
+
+void	Config::setNginx(Nginx *nginx)
+{
+	if (this->nginx == NULL)
+		this->nginx = nginx;
+	return ;
+}
+
+Nginx	*Config::getNginx()
+{
+	return (this->nginx);
 }
 
 bool	Config::returnFalseWithMsg(const char *str)
@@ -250,6 +264,7 @@ bool	Config::makeConfig(const char *path)
 			{
 				iter++;
 				location_name = *iter;
+				instance->servers[key].getLocations()[location_name].setUriKey(location_name);
 			}
 			else if (*iter == "error_page")
 			{
@@ -346,17 +361,117 @@ void		Config::show()
 
 
 /////////////////////////////////////////////////////////
+/////////////// class Fdmanager start ///////////////////
+Fdmanager::Fdmanager() : fd(-1), type(BASE)
+{
+
+}
+
+Fdmanager::~Fdmanager()
+{
+
+}
+
+void Fdmanager::setFd(int fd)
+{
+	this->fd = fd;
+	return ;
+}
+
+void	Fdmanager::setType(e_type type)
+{
+	this->type = type;
+	return ;
+}
+
+e_type	Fdmanager::getType() const
+{
+	return (this->type);
+}
+
+int		Fdmanager::getFd() const
+{
+	return (this->fd);
+}
+
+//////////////// class Fdmanager end ////////////////////
+/////////////////////////////////////////////////////////
+
+
+
+/////////////////////////////////////////////////////////
+/////////////// class Resource start ////////////////////
+Resource::Resource() : fd_read_to(-1), fd_write_from(-1)
+{
+	this->type = RESOURCE;
+}
+
+Resource::~Resource()
+{
+
+}
+
+void	Resource::setFdReadTo(int fd_read_to)
+{
+	this->fd_read_to = fd_read_to;
+	return ;
+}
+
+void	Resource::setFdWriteFrom(int fd_write_from)
+{
+	this->fd_write_from = fd_write_from;
+	return ;
+}
+
+int		Resource::getFdReadTo()
+{
+	return (this->fd_read_to);
+}
+
+int		Resource::getFdWriteFrom()
+{
+	return (this->fd_write_from);
+}
+
+//////////////// class Resource end /////////////////////
+/////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////
+//////////////////// class Pipe start ///////////////////
+Pipe::Pipe()
+{
+	this->type = PIPE;
+}
+
+Pipe::Pipe(int fd)
+{
+	this->fd = fd;
+	this->type = PIPE;
+}
+
+Pipe::~Pipe()
+{
+
+}
+//////////////////// class Pipe end /////////////////////
+/////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////
 ////////////////// class Client start ///////////////////
 Client::Client()
 {
 	this->server_socket_fd = -1;
-	this->socket_fd = -1;
+	this->fd = -1;
 	this->status = REQUEST_RECEIVING;
+	this->type = CLIENT;
 }
 
-Client::Client(int server_socket_fd, int socket_fd) : server_socket_fd(server_socket_fd), socket_fd(socket_fd)
+Client::Client(int server_socket_fd, int fd) : server_socket_fd(server_socket_fd)
 {
-
+	this->fd = fd;
+	this->status = REQUEST_RECEIVING;
+	this->type = CLIENT;
+	this->server_socket_fd = -1;
 }
 
 Client::~Client()
@@ -381,18 +496,6 @@ void	Client::setServerSocketFd(int server_socket_fd)
 	return ;
 }
 
-void	Client::setSocketFd(int socket_fd)
-{
-	this->socket_fd = socket_fd;
-	return ;
-}
-
-void	Client::setRemainBody(long long remain_body)
-{
-	this->remain_body = remain_body;
-	return ;
-}
-
 t_status	Client::getStatus()
 {
 	return (this->status);
@@ -413,16 +516,6 @@ Response	&Client::getResponse()
 	return (this->response);
 }
 
-int		Client::getSocketFd()
-{
-	return (this->socket_fd);
-}
-
-long long		Client::getRemainBody()
-{
-	return (this->remain_body);
-}
-
 unsigned long	Client::getLastRequestMs()
 {
 	return (this->last_request_ms);
@@ -434,24 +527,26 @@ unsigned long	Client::getLastRequestMs()
 ////////////////// class Server start ///////////////////
 Server::Server() : port(-1)
 {
-	
+	this->type = SERVER;
 }
 
 Server::Server(const Server& src)
 {
+	this->type = SERVER;
 	this->ip = src.ip;
 	this->port	=	src.port;
 	this->server_name	=	src.server_name;
-	this->socket_fd		=	src.socket_fd;
+	this->fd		=	src.fd;
 	this->locations.insert(src.locations.begin(), src.locations.end());
 }
 
 Server &Server::operator=(const Server &src)
 {
+	this->type = SERVER;
 	this->ip = src.ip;
 	this->port	=	src.port;
 	this->server_name	=	src.server_name;
-	this->socket_fd		=	src.socket_fd;
+	this->fd		=	src.fd;
 	this->locations.clear();
 	this->locations.insert(src.locations.begin(), src.locations.end());
 
@@ -481,12 +576,6 @@ void	Server::setServerName(const std::string &server_name)
 	return ;
 }
 
-void	Server::setSocketFd(int socket_fd)
-{
-	this->socket_fd = socket_fd;
-	return ;
-}
-
 const std::string &Server::getIP() const
 {
 	return (this->ip);
@@ -500,11 +589,6 @@ const std::string &Server::getServerName() const
 unsigned short		Server::getPort() const
 {
 	return (this->port);
-}
-
-int					Server::getSocketFd() const
-{
-	return (this->socket_fd);
 }
 
 std::map<std::string, Location> &Server::getLocations()
@@ -550,6 +634,7 @@ Location::Location(const Location &src)
 	this->auth_key = src.auth_key;
 	this->redirect_addr = src.redirect_addr;
 	this->redirect_return = src.redirect_return;
+	this->uri_key = src.uri_key;
 }
 
 Location &Location::operator=(const Location &src)
@@ -565,6 +650,7 @@ Location &Location::operator=(const Location &src)
 	this->auth_key = src.auth_key;
 	this->redirect_addr = src.redirect_addr;
 	this->redirect_return = src.redirect_return;
+	this->uri_key = src.uri_key;
 	return (*this);
 }
 
@@ -613,6 +699,17 @@ void		Location::setRedirectAddr(const std::string &redirect_addr)
 {
 	this->redirect_addr = redirect_addr;
 	return ;
+}
+
+void		Location::setUriKey(const std::string &uri_key)
+{
+	this->uri_key = uri_key;
+	return ;
+}
+
+const std::string &Location::getUriKey()
+{
+	return (this->uri_key);
 }
 
 const std::string &Location::getRoot()

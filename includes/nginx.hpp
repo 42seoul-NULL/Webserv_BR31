@@ -13,6 +13,7 @@
 # include <string>
 # include <fcntl.h>
 # include <sys/stat.h>
+# include <vector>
 # include "parser.hpp"
 
 class Nginx
@@ -24,19 +25,21 @@ class Nginx
 
 		int		fd_max;
 
-		std::map<int, std::map<std::string, Server> > servers;
-		std::map<int, Client> clients;
+		std::vector<Fdmanager *> fds;
 
-		void	clear_connected_socket(int connected_socket_fd);
-		const Server &getServerFromClient(int server_socket_fd, const std::string &server_name);
-		Location &getPerfectLocation(int server_socket_fd, const std::string &server_name, const std::string &uri);
-	
 	public	:
 		Nginx();
 		virtual ~Nginx();
 
 		bool	initServers(int queue_size);
 		bool	run(struct timeval	timeout, unsigned int buffer_size);
+
+		void	clear_connected_socket(Fdmanager * fdmanager);
+		void 	insert_pull(Fdmanager *fdmanager);
+		Location &getPerfectLocation(int server_socket_fd, const std::string &uri);
+
+		std::vector<Fdmanager *>  & getFds();
+		
 };
 
 #endif

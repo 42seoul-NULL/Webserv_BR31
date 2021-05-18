@@ -24,7 +24,7 @@ class Response
 		int		checkAuth(const Request& request, Location& location);
 		int		base64_decode(const char *text, char *dst, int numBytes);
 		
-		void	makeErrorReponse(const Request& request, Location& location, int error);
+		void	makeErrorReponse(const Request& request, Location& location, int error, int client_socket);
 
 		int		makeFirstLine(int code);
 		int		makeAllow(const Request& request, Location& location);
@@ -38,18 +38,17 @@ class Response
 		int		makeRetryAfter();
 		int		makeServer();
 		int		makeWWWAuthenticate();
-		int		makeBody(const Request& request, Location &location);
-		int		makeRedirectionResponse(const Request& request, Location& location);
+		int		makeBody(const Request& request, Location &location, int client_socket);
+		int		makeRedirectionResponse(const Request& request, Location& location, int client_socket);
 
 	public:
 		Response(void);
 		Response(const Response& src);
 		virtual ~Response(void);
 		Response&	operator=(const Response& src);
-
 		void	initResponse(void);
-		int		makeResponse(const Request& request, Location& location);
-		const std::string&	getRawResponse(void);
+		int		makeResponse(const Request& request, Location& location, int client_socket);
+		std::string&	getRawResponse(void);
 		int		getLastResponse();
 };
 

@@ -17,12 +17,23 @@
 typedef enum			t_status
 {
 	REQUEST_RECEIVING,
+	BODY_WRITING,
 	RESPONSE_READY
-}						t_status;
+}						e_status;
+
+typedef enum			t_type
+{
+	SERVER,
+	CLIENT,
+	RESOURCE,
+	PIPE,
+	BASE
+}						e_type;
 
 class Location;
 class Server;
 class Response;
+class Nginx;
 
 class Config
 {
@@ -33,10 +44,12 @@ class Config
 		bool	returnFalseWithMsg(const char *str);
 		bool	isReserved(const std::string &src);
 		
+
 		std::map<std::string, Server> servers;
 		static Config*	instance;
 		std::map<std::string, std::string> mime_type;
 		std::map<std::string, std::string> status_code;
+		Nginx *nginx;
 
 	public	:
 		virtual ~Config();
@@ -48,33 +61,73 @@ class Config
 		std::map<std::string, std::string>& getStatusCode();
 		bool	makeConfig(const char *path);
 		
+		void	setNginx(Nginx *nginx);
+		Nginx *getNginx();
+
 		//for test
 		void	show();
 };
 
-class Client
+class Fdmanager
+{
+	protected :
+		int				fd;
+		e_type			type;
+	
+	public	:
+		Fdmanager();
+		virtual ~Fdmanager();
+
+		void		setFd(int fd);
+		int			getFd() const;
+		e_type		getType() const;
+		void		setType(e_type type);
+};
+
+class Resource	:	public Fdmanager
+{
+	private :
+		int				fd_read_to;
+		int				fd_write_from;
+
+	public	:
+		Resource();
+		virtual ~Resource();
+
+		void		setFdReadTo(int fd_read_to);
+		void		setFdWriteFrom(int fd_write_from);
+
+		int			getFdReadTo();
+		int			getFdWriteFrom();
+};
+
+class Pipe		:	public Fdmanager
+{
+	public	:
+		Pipe();
+		Pipe(int fd);
+		virtual ~Pipe();
+};
+
+class Client	:	public Fdmanager
 {
 	private	:
 		t_status		status;
 		int				server_socket_fd;
-		int				socket_fd;
 		Request			request;
 		Response		response;
-		long long		remain_body;
 		unsigned long	last_request_ms;
 
 	public	:
 		Client();
-		Client(int server_socket_fd, int socket_fd);
-		~Client();
+		Client(int server_socket_fd, int fd);
+		virtual ~Client();
 
-		void		setSocketFd(int socket_fd);
 		void		setServerSocketFd(int server_socket_fd);
 		void		setStatus(t_status status);
 		void		setRemainBody(long long remain_body);
 		void		setLastRequestMs(unsigned long last_request_ms);
 
-		int			getSocketFd();
 		int			getServerSocketFd();
 		Request		&getRequest();
 		Response		&getResponse();
@@ -83,13 +136,12 @@ class Client
 		unsigned long getLastRequestMs();
 };
 
-class Server
+class Server	:	public Fdmanager
 {
 	private	:
 		std::string		ip;
 		unsigned short	port;
 		std::string		server_name;
-		int				socket_fd;
 		std::map<std::string, Location> locations;
 
 	public	:
@@ -101,12 +153,10 @@ class Server
 		void	setPort(unsigned short port);
 		void	setIP(const std::string &ip);
 		void	setServerName(const std::string &server_name);
-		void	setSocketFd(int socket_fd);
 
 		const std::string &getIP() const;
 		const std::string &getServerName() const;
 		unsigned short	   getPort() const;
-		int				   getSocketFd() const;
 
 		std::map<std::string, Location> &getLocations();
 		//for test//
@@ -116,6 +166,7 @@ class Server
 class Location
 {
 	private	:
+		std::string		uri_key;
 		std::string		root;
 		std::list<std::string> index;
 		std::list<std::string> allow_methods;
@@ -143,6 +194,7 @@ class Location
 		void			setAuthKey(const std::string &auth_key);
 		void			setRedirectReturn(int redirect_return);
 		void			setRedirectAddr(const std::string &redirect_addr);
+		void			setUriKey(const std::string &uri_key);
 
 		const std::string &getRoot();
 		std::list<std::string> &getIndex();
@@ -155,6 +207,7 @@ class Location
 		int		getRedirectReturn();
 		const std::string &getRedirectAddr();
 		std::map<int, std::string> &getErrorPages();
+		const std::string &getUriKey();
 
 		//for test//
 		void	show();

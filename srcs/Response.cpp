@@ -1,5 +1,6 @@
 #include "../includes/parser.hpp"
 #include "../includes/Response.hpp"
+#include "../includes/nginx.hpp"
 
 Response::Response(void)
 {
@@ -130,41 +131,15 @@ int		Response::checkAuth(const Request &request, Location &location)
 	return (401);
 }
 
-void	Response::makeErrorReponse(const Request &request, Location &location, int error)
+void	Response::makeErrorReponse(const Request &request, Location &location, int error, int client_socket)
 {
 	initResponse();
 
 	//디폴트 에러 페이지 존재할경우 이것으로 처리.
 
 	std::string body;
-	
-	if (location.getErrorPages().find(error) == location.getErrorPages().end())
-		makeDefaultBody(body, error);
-	else
-	{
-		size_t buffer_size = 1000;
-		int fd;
-		char buf[buffer_size + 1];
-		int rb;
+	body.clear();
 
-		fd = open(location.getErrorPages()[error].c_str(), O_RDONLY);
-		if (fd < 0)
-			makeDefaultBody(body, error);
-		else
-		{
-			while ( (rb = read(fd, buf, buffer_size)) > 0 )
-			{
-				buf[rb] = 0;
-				body += std::string(buf);
-			}
-			if (rb < 0)
-			{
-				body.clear();
-				makeDefaultBody(body, error);
-			}
-			close (fd);
-		}
-	}
 
 	makeFirstLine(error);
 	this->raw_response += "Allow:";
@@ -176,12 +151,42 @@ void	Response::makeErrorReponse(const Request &request, Location &location, int 
 	raw_response += "\r\n";
 	makeDate(request);
 	this->raw_response += "Content-Type: " + Config::getInstance()->getMimeType()[".html"] + "\r\n";
-	this->raw_response += "Content-Length: " + ft_itoa(body.size()) + "\r\n";
 	if (error == 401)
 		makeWWWAuthenticate();
+	if (location.getErrorPages().find(error) == location.getErrorPages().end())
+	{
+		makeDefaultBody(body, error);
+		this->raw_response += "Content-Length: " + ft_itoa(body.size()) + "\r\n";
+	}
+	else
+	{
+		int fd;
+
+		fd = open(location.getErrorPages()[error].c_str(), O_RDONLY);
+		if (fd < 0)
+		{
+			makeDefaultBody(body, error);
+			this->raw_response += "Content-Length: " + ft_itoa(body.size()) + "\r\n";
+		}
+		else
+		{
+			struct stat	sb;
+			if (fstat(fd, &sb) < 0)
+			{
+				close(fd);
+				return ;
+			}
+			makeContentLength((int)sb.st_size);
+			Resource *resrc = new Resource();
+			resrc->setFd(fd);
+			resrc->setFdReadTo(client_socket);
+			Config::getInstance()->getNginx()->insert_pull(resrc);
+			(dynamic_cast<Client *>(Config::getInstance()->getNginx()->getFds()[client_socket]))->setStatus(BODY_WRITING);
+		}
+	}
 	this->raw_response += "\r\n";
-	this->raw_response += body;
-	
+	if (body.size() != 0)
+		this->raw_response += body;
 	return ;
 }
 
@@ -208,9 +213,12 @@ int		Response::makeContentLocation(const Request& request, Location &location)
 	if (request.getMethod() == "GET" || request.getMethod() == "HEAD")
 	{
 		std::string absol_path(location.getRoot());
-		absol_path.erase(--(absol_path.end()));
-		absol_path += request.getUri();
-
+		if (request.getUri() != location.getUriKey())
+		{
+			absol_path.erase(--(absol_path.end()));
+			absol_path += request.getUri();
+		}
+		
 		this->raw_response += "Content-Location: " + absol_path + "\r\n";		
 	}
 	return (200);
@@ -252,8 +260,11 @@ int		Response::makeLastModified(const Request& request, Location &location)
 	(void)request;
 
 	std::string absol_path(location.getRoot());
-	absol_path.erase(--(absol_path.end()));
-	absol_path += request.getUri();
+	if (request.getUri() != location.getUriKey())
+	{
+		absol_path.erase(--(absol_path.end()));
+		absol_path += request.getUri();
+	}
 
 	if (stat(absol_path.c_str(), &sb) < 0)
 		return (500);
@@ -303,9 +314,6 @@ int		Response::makeFirstLine(int code)
 int		Response::makeAutoIndexPage(const Request& request, const std::string &path)
 {
 	initResponse();
-
-	std::cout << "makeautoindexpage" << std::endl;
-
 	std::string body;
 	std::string pre_addr = "http://" + request.getHost() + "/";
 
@@ -342,7 +350,7 @@ int		Response::makeAutoIndexPage(const Request& request, const std::string &path
 	return (200);
 }
 
-int		Response::makeBody(const Request& request, Location &location)
+int		Response::makeBody(const Request& request, Location &location, int client_socket)
 {
 	if (request.getMethod() != "GET")
 		return (200);
@@ -350,14 +358,14 @@ int		Response::makeBody(const Request& request, Location &location)
 	//여기서 만들기 직전에 makeContentType 호출
 	int fd;
 	struct stat	sb;
-	size_t buffer_size = 1001;
-	char buf[buffer_size + 1];
-	int rb;
 	size_t idx;
 
 	std::string absol_path(location.getRoot());
-	absol_path.erase(--(absol_path.end()));
-	absol_path += request.getUri();
+	if (request.getUri() != location.getUriKey()) // 다르다. (완벽하게 처리된게 아니다. 뒤에 더해줘야한다.)
+	{
+		absol_path.erase(--(absol_path.end()));
+		absol_path += request.getUri();
+	}
 
 	if (isDirectory(absol_path))
 	{
@@ -394,26 +402,19 @@ int		Response::makeBody(const Request& request, Location &location)
 		close(fd);
 		return (500);
 	}
-
 	makeContentLength((int)sb.st_size);
 	makeLastModified(request, location);
 	this->raw_response += "\r\n";
 
-	while ( (rb = read(fd, buf, buffer_size)) > 0 )
-	{
-		buf[rb] = 0;
-		this->raw_response += buf;
-	}
-	if (rb < 0)
-	{
-		close(fd);
-		return (500);
-	}
-	close(fd);
+	Resource *resrc = new Resource();
+	resrc->setFd(fd);
+	resrc->setFdReadTo(client_socket);
+	Config::getInstance()->getNginx()->insert_pull(resrc);
+	(dynamic_cast<Client *>(Config::getInstance()->getNginx()->getFds()[client_socket]))->setStatus(BODY_WRITING);
 	return (200);
 }
 
-int		Response::makeRedirectionResponse(const Request& request, Location& location)
+int		Response::makeRedirectionResponse(const Request& request, Location& location, int client_socket)
 {
 	int ret;
 	initResponse();
@@ -425,18 +426,21 @@ int		Response::makeRedirectionResponse(const Request& request, Location& locatio
 			(ret = makeLocation(location)) != 200
 		)
 	{
-		makeErrorReponse(request, location, ret);
+		makeErrorReponse(request, location, ret, client_socket);
 		return (this->last_reponse = ret);
 	}
 	return (this->last_reponse = location.getRedirectReturn());
 }
 
-int		Response::makeResponse(const Request& request, Location &location)
+int		Response::makeResponse(const Request& request, Location &location, int client_socket)
 {
 	int ret;
 
+	Client *cli = dynamic_cast<Client *>(Config::getInstance()->getNginx()->getFds()[client_socket]);
+	cli->setStatus(RESPONSE_READY);
+
 	if (location.getRedirectReturn() != -1)
-		return (this->last_reponse = makeRedirectionResponse(request, location));
+		return (this->last_reponse = makeRedirectionResponse(request, location, client_socket));
 
 	if (request.getMethod() == "GET" || request.getMethod() == "HEAD")
 	{
@@ -450,10 +454,10 @@ int		Response::makeResponse(const Request& request, Location &location)
 				(ret = makeRetryAfter()) != 200 ||
 				(ret = makeServer()) != 200 ||
 				(ret = makeWWWAuthenticate()) != 200 ||
-				(ret = makeBody(request, location)) != 200
+				(ret = makeBody(request, location, client_socket)) != 200
 			)
 		{
-			makeErrorReponse(request, location, ret);
+			makeErrorReponse(request, location, ret, client_socket);
 			return (this->last_reponse = ret);
 		}
 		return (this->last_reponse = 200);
@@ -461,7 +465,7 @@ int		Response::makeResponse(const Request& request, Location &location)
 	return (this->last_reponse = 200);
 }
 
-const std::string&	Response::getRawResponse(void)
+std::string&	Response::getRawResponse(void)
 {
 	return (this->raw_response);
 }
