@@ -18,7 +18,7 @@ class Response
 		int		last_reponse;
 		std::string raw_response;
 		void	makeDefaultBody(std::string &body, int error);
-		int		makeAutoIndexPage(const Request& request, Location& location, const std::string &path);
+		int		makeAutoIndexPage(const Request& request, const std::string &path);
 		bool	isExist(std::string &path);
 		bool	isDirectory(std::string &path);
 		int		checkAuth(const Request& request, Location& location);
