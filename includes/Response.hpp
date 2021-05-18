@@ -24,7 +24,7 @@ class Response
 		int		checkAuth(const Request& request, Location& location);
 		int		base64_decode(const char *text, char *dst, int numBytes);
 		
-		void	makeErrorReponse(const Request& request, Location& location, int error, int client_socket);
+		int		makeErrorReponse(const Request& request, Location& location, int error, int client_socket);
 
 		int		makeFirstLine(int code);
 		int		makeAllow(const Request& request, Location& location);
@@ -38,8 +38,9 @@ class Response
 		int		makeRetryAfter();
 		int		makeServer();
 		int		makeWWWAuthenticate();
-		int		makeBody(const Request& request, Location &location, int client_socket);
+		int		makeGetBody(const Request& request, Location &location, int client_socket);
 		int		makeRedirectionResponse(const Request& request, Location& location, int client_socket);
+		int		makeGetResponse(const Request& request, Location& location, int client_socket);
 
 	public:
 		Response(void);

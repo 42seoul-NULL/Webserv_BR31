@@ -135,8 +135,6 @@ bool	Nginx::run(struct timeval	timeout, unsigned int buffer_size)
 	int		fd_num;
 	char	buf[buffer_size + 1];
 
-	unsigned long	timeout_ms = (timeout.tv_sec * 1000) + (timeout.tv_usec / 1000);	
-
 	while (1)
 	{
 		usleep(5); // cpu 점유가 100% 까지 올라가는 것을 막기 위해서
@@ -180,7 +178,7 @@ bool	Nginx::run(struct timeval	timeout, unsigned int buffer_size)
 
 					client->setLastRequestMs(ft_get_time());
 					len = read(i, buf, buffer_size);
-					if (len == 0)
+					if (len <= 0)
 					{
 						std::cout << "disconnected : " << i << " in Server" << std::endl;
 						clear_connected_socket(client);

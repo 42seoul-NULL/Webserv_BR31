@@ -131,7 +131,7 @@ int		Response::checkAuth(const Request &request, Location &location)
 	return (401);
 }
 
-void	Response::makeErrorReponse(const Request &request, Location &location, int error, int client_socket)
+int		Response::makeErrorReponse(const Request &request, Location &location, int error, int client_socket)
 {
 	initResponse();
 
@@ -174,7 +174,7 @@ void	Response::makeErrorReponse(const Request &request, Location &location, int 
 			if (fstat(fd, &sb) < 0)
 			{
 				close(fd);
-				return ;
+					return (this->last_reponse = error);
 			}
 			makeContentLength((int)sb.st_size);
 			Resource *resrc = new Resource();
@@ -187,7 +187,7 @@ void	Response::makeErrorReponse(const Request &request, Location &location, int 
 	this->raw_response += "\r\n";
 	if (body.size() != 0)
 		this->raw_response += body;
-	return ;
+	return (this->last_reponse = error);
 }
 
 int		Response::makeContentLanguage()
@@ -350,70 +350,6 @@ int		Response::makeAutoIndexPage(const Request& request, const std::string &path
 	return (200);
 }
 
-int		Response::makeBody(const Request& request, Location &location, int client_socket)
-{
-	if (request.getMethod() != "GET")
-		return (200);
-
-	//여기서 만들기 직전에 makeContentType 호출
-	int fd;
-	struct stat	sb;
-	size_t idx;
-
-	std::string absol_path(location.getRoot());
-	if (request.getUri() != location.getUriKey()) // 다르다. (완벽하게 처리된게 아니다. 뒤에 더해줘야한다.)
-	{
-		absol_path.erase(--(absol_path.end()));
-		absol_path += request.getUri();
-	}
-
-	if (isDirectory(absol_path))
-	{
-		if ( *(--absol_path.end()) != '/')
-			absol_path += '/';
-
-		bool is_exist = false;
-		std::string temp_path;
-		for (std::list<std::string>::iterator iter = location.getIndex().begin(); iter != location.getIndex().end(); iter++)
-		{
-			temp_path = (absol_path + (*iter));
-			if ((is_exist = isExist(temp_path)) == true)
-				break ;
-		}
-		if (is_exist == false && location.getAutoIndex())
-			return (makeAutoIndexPage(request, absol_path));
-		absol_path = temp_path;
-	}
-	if (!isExist(absol_path))
-		return (404);
-
-	idx = absol_path.find_first_of('/');
-	idx = absol_path.find_first_of('.',idx);
-
-	if (idx == std::string::npos) // 확장자가 없다.
-		makeContentType(request, "application/octet-stream");
-	else
-		makeContentType(request, Config::getInstance()->getMimeType()[absol_path.substr(idx)]);
-
-	if ((fd = open(absol_path.c_str(), O_RDONLY)) < 0)
-		return (500);
-	if (fstat(fd, &sb) < 0)
-	{
-		close(fd);
-		return (500);
-	}
-	makeContentLength((int)sb.st_size);
-	makeLastModified(request, location);
-	this->raw_response += "\r\n";
-
-	Resource *resrc = new Resource();
-	resrc->setFd(fd);
-	resrc->setFdReadTo(client_socket);
-	Config::getInstance()->getNginx()->insert_pull(resrc);
-	(dynamic_cast<Client *>(Config::getInstance()->getNginx()->getFds()[client_socket]))->setStatus(BODY_WRITING);
-	return (200);
-}
-
 int		Response::makeRedirectionResponse(const Request& request, Location& location, int client_socket)
 {
 	int ret;
@@ -439,29 +375,25 @@ int		Response::makeResponse(const Request& request, Location &location, int clie
 	Client *cli = dynamic_cast<Client *>(Config::getInstance()->getNginx()->getFds()[client_socket]);
 	cli->setStatus(RESPONSE_READY);
 
+	//	리다이렉션 체크
 	if (location.getRedirectReturn() != -1)
 		return (this->last_reponse = makeRedirectionResponse(request, location, client_socket));
 
-	if (request.getMethod() == "GET" || request.getMethod() == "HEAD")
-	{
-		if (
-				(ret = checkAuth(request, location)) != 200 ||
-				(ret = makeFirstLine(200)) != 200 ||
-				(ret = makeAllow(request, location)) != 200 ||
-				(ret = makeContentLanguage()) != 200 ||
-				(ret = makeContentLocation(request, location)) != 200 ||
-				(ret = makeDate(request)) != 200 ||
-				(ret = makeRetryAfter()) != 200 ||
-				(ret = makeServer()) != 200 ||
-				(ret = makeWWWAuthenticate()) != 200 ||
-				(ret = makeBody(request, location, client_socket)) != 200
-			)
-		{
-			makeErrorReponse(request, location, ret, client_socket);
-			return (this->last_reponse = ret);
-		}
-		return (this->last_reponse = 200);
-	}
+	// first line 달아줌
+	makeFirstLine(200);
+
+	//	allow method check
+	if ( (ret = makeAllow(request, location)) != 200 )
+		return (makeErrorReponse(request, location, ret, client_socket));
+
+	// auth check
+	if ( (ret = checkAuth(request, location)) != 200 )
+		return (makeErrorReponse(request, location, ret, client_socket));
+
+	if (request.getMethod() == "GET")
+		return (makeGetResponse(request, location, client_socket));
+	// 여기서부터 else if 로 메소드를 하나씩 붙여갈 예정.
+
 	return (this->last_reponse = 200);
 }
 
