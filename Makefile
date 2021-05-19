@@ -1,47 +1,55 @@
-SRCNAME	=		\
-					main.cpp\
-					parser.cpp\
-					Request.cpp\
-					Response.cpp\
-					Response_get.cpp\
-					nginx.cpp
+NAME = webserv
 
-SRCDIR		=		./srcs/
+SRCNAME	=	main.cpp\
+			parser.cpp\
+			Request.cpp\
+			Response.cpp\
+			Response_get.cpp\
+			nginx.cpp
+SRCDIR = ./srcs/
+SRCS = $(addprefix $(SRCDIR), $(SRCNAME))
 
-SRCS		=		${addprefix ${SRCDIR}, ${SRCNAME}}
+INC_DIR = ./includes/
+INCLUDE = -I$(INC_DIR) -I$(LIB_DIR)
 
-INCDIR		=		./includes/
+LIB_DIR = ./libft_cpp/
+LIB_NAME = libft.a
 
-NAME		=		webserv
+CC = clang++
+CFLAGS = -Wall -Wextra -Werror -std=c++98
+DCFLAGS = -g $(SRCS)
 
-LIB_NAME	=		libft.a
+all : $(NAME)
 
-CC			=		clang++
+clean :
+	make -C $(LIB_DIR) clean
 
-CF			=		-Wall -Wextra -Werror -std=c++98 -I ${INCDIR} ${SRCS}
-DCF			=		-g ${SRCS}
+fclean : clean
+	make -C $(LIB_DIR) fclean
+	rm -rf webserv.dSYM
+	rm -rf $(NAME) testlog
 
-${NAME}     :
-					make all -C "./libft_cpp"
-					cp libft_cpp/${LIB_NAME} ${LIB_NAME}
-					${CC} ${CF} ${LIB_NAME} -o ${NAME} 
+re : fclean all
 
-dbg		:
-					${CC} ${DCF} ${LIB_NAME} -o ${NAME}
-					lldb webserv -- configs/test.conf
+dbg : $(SRCS)
+	$(CC) $(DCFLAGS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)
+	lldb webserv -- configs/test.conf
 
-test		:
-					${CC} ${DCF} ${LIB_NAME} -o ${NAME}
-					./webserv configs/test.conf
+$(NAME) : $(LIB_DIR)$(LIB_NAME) $(SRCS)
+	$(CC) $(CFLAGS) $(SRCS) -L$(LIB_DIR) -lft -o $(NAME)
 
-fclean		:
-					make fclean -C "./libft_cpp"
-					rm -rf webserv.dSYM
-					rm -rf ${NAME}
-					rm -rf ${LIB_NAME}
+$(LIB_DIR)$(LIB_NAME) :
+	make -C $(LIB_DIR) all
 
-re			:		fclean all
+###### 여기부터 테스터 관련 설정 ####
+TESTS_DIR = ./tests/
+TEST1 = test1_tester
 
-all         :      	${NAME}
+test1 : all
+	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config > testlog &
+	-./tests/tester_bin/tester http://localhost:8280
+	killall $(NAME)
 
-.PHONY		:		fclean re all test ${NAME}
+##############################
+
+.PHONY : all clean fclean re dbg test1

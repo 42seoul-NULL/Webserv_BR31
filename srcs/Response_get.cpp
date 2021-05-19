@@ -19,7 +19,7 @@ int		Response::makeGetBody(const Request& request, Location &location, int clien
 	// 	absol_path += request.getUri();
 	// }
 
-	for (int i = location.getUriKey().size(); i < request.getUri().size(); i++)
+	for (size_t i = location.getUriKey().size(); i < request.getUri().size(); i++)
 		absol_path += request.getUri()[i];
 
 
