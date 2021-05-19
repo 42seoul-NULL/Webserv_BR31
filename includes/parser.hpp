@@ -9,7 +9,7 @@
 # include <fcntl.h>
 # include <iostream>
 # include <vector>
-# include "../libft_cpp/libft.hpp"
+# include "libft.hpp"
 # include <queue>
 # include "Request.hpp"
 # include "Response.hpp"
@@ -43,7 +43,7 @@ class Config
 		Config& operator=(const Config& src);
 		bool	returnFalseWithMsg(const char *str);
 		bool	isReserved(const std::string &src);
-		
+
 
 		std::map<std::string, Server> servers;
 		static Config*	instance;
@@ -55,12 +55,12 @@ class Config
 		virtual ~Config();
 		static Config* getInstance();
 		static const int decodeMimeBase64[256];
-		
+
 		std::map<std::string, Server>& getServers();
-		std::map<std::string, std::string>& getMimeType();	
+		std::map<std::string, std::string>& getMimeType();
 		std::map<std::string, std::string>& getStatusCode();
 		bool	makeConfig(const char *path);
-		
+
 		void	setNginx(Nginx *nginx);
 		Nginx *getNginx();
 
@@ -73,7 +73,7 @@ class Fdmanager
 	protected :
 		int				fd;
 		e_type			type;
-	
+
 	public	:
 		Fdmanager();
 		virtual ~Fdmanager();

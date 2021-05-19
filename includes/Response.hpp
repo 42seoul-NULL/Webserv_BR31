@@ -23,7 +23,6 @@ class Response
 		bool	isDirectory(std::string &path);
 		int		checkAuth(const Request& request, Location& location);
 		int		base64_decode(const char *text, char *dst, int numBytes);
-		
 		int		makeErrorReponse(const Request& request, Location& location, int error, int client_socket);
 
 		int		makeFirstLine(int code);
@@ -38,12 +37,20 @@ class Response
 		int		makeRetryAfter();
 		int		makeServer();
 		int		makeWWWAuthenticate();
+		std::string	getAbsolutePath(const Request& request, Location& location);
 		int		makeGetBody(const Request& request, Location &location, int client_socket);
 		int		makeRedirectionResponse(const Request& request, Location& location, int client_socket);
 		int		makeGetResponse(const Request& request, Location& location, int client_socket);
 
+<<<<<<< HEAD
 		bool	isCgiExtension(const Request& request, Location& location);
 		char	**makeEnv(const Request& request, Location& location);
+=======
+		int		makePutResponse(const Request& request, Location& location, int client_socket);
+		int		makeDirectoryToCreate(const Request& request, Location &location);
+		int		createPutRequest(const Request& request, Location &location, int client_socket);
+
+>>>>>>> 6ac232032e0735b540e38bf3f21eb1085127080e
 	public:
 		Response(void);
 		Response(const Response& src);

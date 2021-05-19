@@ -48,6 +48,11 @@ const std::string&	Request::getRawBody(void) const
 	return (this->raw_body);
 }
 
+const std::string&	Request::getRawBody(void) const
+{
+	return (this->raw_body);
+}
+
 const std::string&	Request::getMethod(void) const
 {
 	return (this->method);
@@ -178,7 +183,7 @@ void	Request::initRequest(void)
 	this->method.clear();
 	this->uri.clear();
 	this->http_version.clear();
-	
+
 	this->accept_charsets.clear();
 	this->accept_language.clear();
 	this->authorization.clear();

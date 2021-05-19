@@ -3,7 +3,7 @@
 
 # include <iostream>
 # include <vector>
-# include "../libft_cpp/libft.hpp"
+# include "libft.hpp"
 
 # define NEEDBODY -1
 # define REQUESTCOMPLETE -2
@@ -42,6 +42,7 @@ class Request
 
 		std::string&	getRawRequest(void);
 		std::string&	getRawBody(void);
+		const std::string&	getRawBody(void) const;
 		const std::string&	getRawBody(void) const;
 		const std::string&	getMethod(void) const;
 		const std::string&	getUri(void) const;
