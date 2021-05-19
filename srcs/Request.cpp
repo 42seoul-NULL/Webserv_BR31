@@ -48,11 +48,6 @@ const std::string&	Request::getRawBody(void) const
 	return (this->raw_body);
 }
 
-const std::string&	Request::getRawBody(void) const
-{
-	return (this->raw_body);
-}
-
 const std::string&	Request::getMethod(void) const
 {
 	return (this->method);

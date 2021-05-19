@@ -42,15 +42,12 @@ class Response
 		int		makeRedirectionResponse(const Request& request, Location& location, int client_socket);
 		int		makeGetResponse(const Request& request, Location& location, int client_socket);
 
-<<<<<<< HEAD
 		bool	isCgiExtension(const Request& request, Location& location);
 		char	**makeEnv(const Request& request, Location& location);
-=======
 		int		makePutResponse(const Request& request, Location& location, int client_socket);
 		int		makeDirectoryToCreate(const Request& request, Location &location);
 		int		createPutRequest(const Request& request, Location &location, int client_socket);
 
->>>>>>> 6ac232032e0735b540e38bf3f21eb1085127080e
 	public:
 		Response(void);
 		Response(const Response& src);
