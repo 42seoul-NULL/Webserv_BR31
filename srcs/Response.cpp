@@ -1,6 +1,6 @@
-#include "../includes/parser.hpp"
-#include "../includes/Response.hpp"
-#include "../includes/nginx.hpp"
+#include "Response.hpp"
+#include "parser.hpp"
+#include "nginx.hpp"
 
 Response::Response(void)
 {
@@ -114,7 +114,7 @@ void	Response::makeDefaultBody(std::string &body, int error)
 	body += ft_itoa(error);
 	body += "<h1>\n";
 	body += "</body>\n";
-	body += "</html>";	
+	body += "</html>";
 }
 
 int		Response::checkAuth(const Request &request, Location &location)
@@ -202,6 +202,14 @@ int		Response::makeContentLength(int size)
 	return (200);
 }
 
+std::string	Response::getAbsolutePath(const Request& request, Location& location)
+{
+	std::string absol_path(location.getRoot());
+	for (size_t i = location.getUriKey().size(); i < request.getUri().size(); i++)
+		absol_path += request.getUri()[i];
+	return (absol_path);
+}
+
 int		Response::makeContentLocation(const Request& request, Location &location)
 {
 	// 서버에 대한 리소스 접근의 절대적 경로.
@@ -210,17 +218,7 @@ int		Response::makeContentLocation(const Request& request, Location &location)
 	// 지금 작성한 내용은 루트에 대해 해당하는 내용임
 
 	// 반환된 데이터에 대한 위치 //   처리하는 location 이 리다이렉션이 있을 경우 리다이렉션을 처리해서 리다이렉션 주소를 여기에 찍어줌. 예시) content_location: https://www.naver.com\r\n
-	if (request.getMethod() == "GET" || request.getMethod() == "HEAD")
-	{
-		std::string absol_path(location.getRoot());
-		if (request.getUri() != location.getUriKey())
-		{
-			absol_path.erase(--(absol_path.end()));
-			absol_path += request.getUri();
-		}
-		
-		this->raw_response += "Content-Location: " + absol_path + "\r\n";		
-	}
+	this->raw_response += "Content-Location: " + getAbsolutePath(request, location) + "\r\n";
 	return (200);
 }
 
@@ -283,7 +281,7 @@ int		Response::makeLocation(Location &location)
 
 int		Response::makeRetryAfter()
 {
-	this->raw_response += "Retry-After: 120\r\n"; 
+	this->raw_response += "Retry-After: 120\r\n";
 	return (200);
 }
 
@@ -392,6 +390,8 @@ int		Response::makeResponse(const Request& request, Location &location, int clie
 
 	if (request.getMethod() == "GET")
 		return (makeGetResponse(request, location, client_socket));
+	else if (request.getMethod() == "PUT")
+		return (makePutResponse(request, location, client_socket));
 	// 여기서부터 else if 로 메소드를 하나씩 붙여갈 예정.
 
 	return (this->last_reponse = 200);

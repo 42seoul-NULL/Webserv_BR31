@@ -25,7 +25,7 @@ void	Nginx::clear_connected_socket(Fdmanager * fdmanager)
 	FT_FD_CLR(fdmanager->getFd(), &(this->errors));
 	close(fdmanager->getFd());
 	this->fds[fdmanager->getFd()] = NULL;
-	delete fdmanager;	
+	delete fdmanager;
 	return ;
 }
 
@@ -105,6 +105,8 @@ bool	Nginx::initServers(int queue_size)
 	{
 		struct sockaddr_in  server_addr;
 		iter->second.setFd(socket(PF_INET, SOCK_STREAM, 0));
+		int option = 1;
+		setsockopt(iter->second.getFd(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
 		ft_memset(&server_addr, 0, sizeof(server_addr));
 		server_addr.sin_family = AF_INET;
@@ -157,7 +159,7 @@ bool	Nginx::run(struct timeval	timeout, unsigned int buffer_size)
 
 		if (fd_num == 0)
 			continue ;
-		
+
 		for (int i = 0; i <= this->fd_max; i++)
 		{
 			if (FT_FD_ISSET(i, &cpy_reads))
@@ -168,7 +170,7 @@ bool	Nginx::run(struct timeval	timeout, unsigned int buffer_size)
 				{
 					std::cout << "\033[32m server connection called \033[0m" << std::endl;
 					int client_socket = accept(i, (struct sockaddr*)&client_addr, &addr_size);
-					
+
 					Client* temp_client = new Client();
 					temp_client->setServerSocketFd(i);
 					temp_client->setFd(client_socket);
@@ -245,6 +247,16 @@ bool	Nginx::run(struct timeval	timeout, unsigned int buffer_size)
 						}
 					}
 					break;
+				}
+				case RESOURCE:
+				{
+					Resource *res = dynamic_cast<Resource *>(this->fds[i]);
+					Client *cli = dynamic_cast<Client *>(this->fds[res->getFdWriteFrom()]);
+					write(res->getFd(), cli->getRequest().getRawBody().c_str(), cli->getRequest().getRawBody().size());
+					clear_connected_socket(res);
+					cli->setStatus(RESPONSE_READY);
+
+					break ;
 				}
 				default:
 					break;

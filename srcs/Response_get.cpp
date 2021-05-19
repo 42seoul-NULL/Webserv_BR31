@@ -1,32 +1,19 @@
-#include "../includes/parser.hpp"
-#include "../includes/Response.hpp"
-#include "../includes/nginx.hpp"
+#include "parser.hpp"
+#include "Response.hpp"
+#include "nginx.hpp"
 
 int		Response::makeGetBody(const Request& request, Location &location, int client_socket)
 {
-	if (request.getMethod() != "GET")
-		return (200);
-
 	//여기서 만들기 직전에 makeContentType 호출
 	int fd;
 	struct stat	sb;
 	size_t idx;
 
-	std::string absol_path(location.getRoot());
-	// if ((request.getUri() != location.getUriKey()) && ( *(--request.getUri().end()) == '/' )) // 다르면서 디렉토리다 (완벽하게 처리된게 아니다. 뒤에 더해줘야한다.)
-	// {
-	// 	absol_path.erase(--(absol_path.end()));
-	// 	absol_path += request.getUri();
-	// }
-
-	for (size_t i = location.getUriKey().size(); i < request.getUri().size(); i++)
-		absol_path += request.getUri()[i];
-
+	std::string absol_path = getAbsolutePath(request, location);
 
 	std::cout << request.getUri() << std::endl;
 	std::cout << location.getUriKey() << std::endl;
 	std::cout << absol_path << std::endl;
-
 
 	if (isDirectory(absol_path))
 	{
@@ -91,3 +78,4 @@ int		Response::makeGetResponse(const Request& request, Location& location, int c
 		return (makeErrorReponse(request, location, ret, client_socket));
 	return (200);
 }
+

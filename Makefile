@@ -5,6 +5,7 @@ SRCNAME	=	main.cpp\
 			Request.cpp\
 			Response.cpp\
 			Response_get.cpp\
+			Response_put.cpp\
 			nginx.cpp
 SRCDIR = ./srcs/
 SRCS = $(addprefix $(SRCDIR), $(SRCNAME))
@@ -36,7 +37,7 @@ dbg : $(SRCS)
 	lldb webserv -- configs/test.conf
 
 $(NAME) : $(LIB_DIR)$(LIB_NAME) $(SRCS)
-	$(CC) $(CFLAGS) $(SRCS) -L$(LIB_DIR) -lft -o $(NAME)
+	$(CC) $(CFLAGS) $(SRCS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)
 
 $(LIB_DIR)$(LIB_NAME) :
 	make -C $(LIB_DIR) all
@@ -44,10 +45,13 @@ $(LIB_DIR)$(LIB_NAME) :
 ###### 여기부터 테스터 관련 설정 ####
 TESTS_DIR = ./tests/
 TEST1 = test1_tester
+TEST1_PORT = 8080
 
+run : all
+	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config
 test1 : all
 	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config > testlog &
-	-./tests/tester_bin/tester http://localhost:8280
+	-./tests/tester_bin/tester http://localhost:$(TEST1_PORT)
 	killall $(NAME)
 
 ##############################
