@@ -41,6 +41,8 @@ class Request
 		Request& operator=(const Request& src);
 
 		std::string&	getRawRequest(void);
+		std::string&	getRawBody(void);
+		const std::string&	getRawBody(void) const;
 		const std::string&	getMethod(void) const;
 		const std::string&	getUri(void) const;
 		const std::string&	getHttpVersion(void) const;
@@ -94,6 +96,7 @@ class Request
 
 		bool	bodyCheck(void);
 		bool	isComplete(void);
+
 
 // 테스트용 메소드
 	public:

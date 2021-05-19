@@ -103,10 +103,27 @@ class Resource	:	public Fdmanager
 
 class Pipe		:	public Fdmanager
 {
+	private :
+		int		pipe_read;   // 파이프를 뜨면 fds[1] 에 써주고, fds[0] 에서 읽어주면 된다.
+		int		pipe_write;
+
+		int		write_from_client;
+		int		read_from_fd;
+
 	public	:
 		Pipe();
 		Pipe(int fd);
 		virtual ~Pipe();
+
+		int		getPipeRead();
+		int		getPipeWrite();
+		int		getWriteFromClient();
+		int		getReadFromFd();
+
+		void	setPipeRead(int pipe_read);
+		void	setPipeWrite(int pipe_write);
+		void	setWriteFromClient(int write_from_client);
+		void	setReadFromFd(int read_from_fd);
 };
 
 class Client	:	public Fdmanager
@@ -170,11 +187,11 @@ class Location
 		std::string		root;
 		std::list<std::string> index;
 		std::list<std::string> allow_methods;
+		std::map<std::string, std::string> cgi_infos;
 		std::map<int, std::string> error_pages;
 		int				request_max_body_size;
 		std::string		upload_path;
 		bool			auto_index;
-		std::string		cgi_extension;
 		std::string		auth_key;
 
 		int				redirect_return;
@@ -190,7 +207,6 @@ class Location
 		void			setRequestMaxBodySize(int request_max_body_size);
 		void			setUploadPath(const std::string &upload_path);
 		void			setAutoIndex(bool auto_index);
-		void			setCgiExtension(const std::string &cgi_extension);
 		void			setAuthKey(const std::string &auth_key);
 		void			setRedirectReturn(int redirect_return);
 		void			setRedirectAddr(const std::string &redirect_addr);
@@ -202,7 +218,7 @@ class Location
 		int getRequestMaxBodySize();
 		const std::string &getUploadPath();
 		bool	getAutoIndex();
-		const std::string &getCgiExtension();
+		std::map<std::string, std::string>& getCgiInfos();
 		const std::string &getAuthKey();
 		int		getRedirectReturn();
 		const std::string &getRedirectAddr();

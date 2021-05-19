@@ -211,7 +211,7 @@ bool	Config::isReserved(const std::string &src)
 		src == "auto_index" ||
 		src == "request_max_body_size" ||
 		src == "auth_key" ||
-		src == "cgi_extension" ||
+		src == "cgi_info" ||
 		src == "return" ||
 		src == "}" ||
 		src == "{" )
@@ -320,10 +320,13 @@ bool	Config::makeConfig(const char *path)
 				iter++;
 				instance->servers[key].getLocations()[location_name].setRequestMaxBodySize(ft_atoi(*iter));
 			}
-			else if (*iter == "cgi_extension")
+			else if (*iter == "cgi_info")
 			{
 				iter++;
-				instance->servers[key].getLocations()[location_name].setCgiExtension(*iter);
+				std::string key5 = *iter;
+				iter++;
+				std::string value5 = *iter;
+				instance->servers[key].getLocations()[location_name].getCgiInfos()[key5] = value5;
 			}
 			else if (*iter == "auth_key")
 			{
@@ -438,12 +441,12 @@ int		Resource::getFdWriteFrom()
 
 /////////////////////////////////////////////////////////
 //////////////////// class Pipe start ///////////////////
-Pipe::Pipe()
+Pipe::Pipe() : pipe_read(-1), pipe_write(-1), read_from_fd(-1), write_from_client(-1)
 {
 	this->type = PIPE;
 }
 
-Pipe::Pipe(int fd)
+Pipe::Pipe(int fd) : pipe_read(-1), pipe_write(-1), read_from_fd(-1), write_from_client(-1)
 {
 	this->fd = fd;
 	this->type = PIPE;
@@ -452,6 +455,50 @@ Pipe::Pipe(int fd)
 Pipe::~Pipe()
 {
 
+}
+
+void	Pipe::setPipeRead(int pipe_read)
+{
+	this->pipe_read = pipe_read;
+	return ;
+}
+
+void	Pipe::setPipeWrite(int pipe_write)
+{
+	this->pipe_write = pipe_write;
+	return ;
+}
+
+void	Pipe::setReadFromFd(int read_from_fd)
+{
+	this->read_from_fd = read_from_fd;
+	return ;
+}
+
+void	Pipe::setWriteFromClient(int write_from_client)
+{
+	this->write_from_client = write_from_client;
+	return ;
+}	
+
+int		Pipe::getPipeRead()
+{
+	return (this->pipe_read);
+}
+
+int		Pipe::getPipeWrite()
+{
+	return (this->pipe_write);
+}
+
+int		Pipe::getReadFromFd()
+{
+	return (this->read_from_fd);
+}
+
+int		Pipe::getWriteFromClient()
+{
+	return (this->write_from_client);
 }
 //////////////////// class Pipe end /////////////////////
 /////////////////////////////////////////////////////////
@@ -630,7 +677,7 @@ Location::Location(const Location &src)
 	this->error_pages.insert(src.error_pages.begin(), src.error_pages.end());
 	this->upload_path = src.upload_path;
 	this->auto_index = src.auto_index;
-	this->cgi_extension = src.cgi_extension;
+	this->cgi_infos.insert(src.cgi_infos.begin(), src.cgi_infos.end());
 	this->auth_key = src.auth_key;
 	this->redirect_addr = src.redirect_addr;
 	this->redirect_return = src.redirect_return;
@@ -646,7 +693,7 @@ Location &Location::operator=(const Location &src)
 	this->error_pages.insert(src.error_pages.begin(), src.error_pages.end());
 	this->upload_path = src.upload_path;
 	this->auto_index = src.auto_index;
-	this->cgi_extension = src.cgi_extension;
+	this->cgi_infos.insert(src.cgi_infos.begin(), src.cgi_infos.end());
 	this->auth_key = src.auth_key;
 	this->redirect_addr = src.redirect_addr;
 	this->redirect_return = src.redirect_return;
@@ -674,12 +721,6 @@ void		Location::setUploadPath(const std::string &upload_path)
 void		Location::setAutoIndex(bool auto_index)
 {
 	this->auto_index = auto_index;
-	return ;
-}
-
-void		Location::setCgiExtension(const std::string &cgi_extension)
-{
-	this->cgi_extension = cgi_extension;
 	return ;
 }
 
@@ -747,9 +788,9 @@ bool	Location::getAutoIndex()
 	return (this->auto_index);
 }
 
-const std::string &Location::getCgiExtension()
+std::map<std::string, std::string>& Location::getCgiInfos()
 {
-	return (this->cgi_extension);
+	return (this->cgi_infos);
 }
 
 const std::string &Location::getAuthKey()
@@ -774,7 +815,6 @@ void	Location::show()
 	std::cout << "rqmbs	:	" << this->request_max_body_size << std::endl;
 	std::cout << "upload_path	:	" << this->upload_path << std::endl;
 	std::cout << "auto_index	:	" << this->auto_index << std::endl;
-	std::cout << "cgi_extension	:	" << this->cgi_extension << std::endl;
 	std::cout << "auth_key	:	" << this->auth_key << std::endl;
 	std::cout << "index	: ";
 	for (std::list<std::string>::iterator iter = this->index.begin(); iter != this->index.end(); iter++)
@@ -786,6 +826,9 @@ void	Location::show()
 	std::cout << std::endl;
 	std::cout << "error_pages	: " << std::endl;
 	for (std::map<int, std::string>::iterator iter = this->error_pages.begin(); iter != this->error_pages.end(); iter++)
+		std::cout << iter->first << " | " << iter->second << std::endl;
+	std::cout << "cgi_infos	: " << std::endl;
+	for (std::map<std::string, std::string>::iterator iter = this->cgi_infos.begin(); iter != this->cgi_infos.end(); iter++)
 		std::cout << iter->first << " | " << iter->second << std::endl;
 }
 

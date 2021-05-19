@@ -42,6 +42,8 @@ class Response
 		int		makeRedirectionResponse(const Request& request, Location& location, int client_socket);
 		int		makeGetResponse(const Request& request, Location& location, int client_socket);
 
+		bool	isCgiExtension(const Request& request, Location& location);
+		char	**makeEnv(const Request& request, Location& location);
 	public:
 		Response(void);
 		Response(const Response& src);
@@ -51,6 +53,7 @@ class Response
 		int		makeResponse(const Request& request, Location& location, int client_socket);
 		std::string&	getRawResponse(void);
 		int		getLastResponse();
+		int		makeCgiResponse(const Request& request, Location& location, int client_socket, int cgi_stdin_fd = -1);
 };
 
 #endif

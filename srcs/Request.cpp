@@ -38,6 +38,16 @@ std::string&	Request::getRawRequest(void)
 	return (this->raw_request);
 }
 
+std::string&	Request::getRawBody(void)
+{
+	return (this->raw_body);
+}
+
+const std::string&	Request::getRawBody(void) const
+{
+	return (this->raw_body);
+}
+
 const std::string&	Request::getMethod(void) const
 {
 	return (this->method);

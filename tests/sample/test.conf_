@@ -16,7 +16,7 @@ server
 		root ./tests/www/
 		index index.html index2.html
 		auto_index on
-		cgi_extension .bla
+		cgi_info .bla
 		auth_key hski:1234
 	}
 
@@ -31,7 +31,7 @@ server
 	location /virtual/
 	{
 		root ./tests/www/
-		cgi_extension .bla
+		cgi_info .bla
 		auth_key kilee:1234
 	}
 

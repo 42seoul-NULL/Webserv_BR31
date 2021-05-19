@@ -64,6 +64,27 @@ void	Nginx::insert_pull(Fdmanager *fdmanager) // 이미 new 가 되어 들어온
 		this->fds[fd] = fdmanager;
 		break ;
 	}
+	case PIPE:
+	{
+		Pipe *pip = dynamic_cast<Pipe *>(fdmanager);
+		if (pip->getWriteFromClient() != -1) // 적어야 한다.
+		{
+			FT_FD_SET(pip->getPipeWrite(), &(this->writes));
+			FT_FD_SET(pip->getPipeWrite(), &(this->errors));
+			if (this->fd_max < pip->getPipeWrite())
+				this->fd_max = pip->getPipeWrite();
+			this->fds[pip->getPipeWrite()] = fdmanager;
+		}
+		else if (pip->getReadFromFd() != -1) // 읽어야 한다.
+		{
+			FT_FD_SET(pip->getPipeRead(), &(this->reads));
+			FT_FD_SET(pip->getPipeRead(), &(this->errors));
+			if (this->fd_max < pip->getPipeRead())
+				this->fd_max = pip->getPipeRead();
+			this->fds[pip->getPipeRead()] = fdmanager;
+		}
+		break ;
+	}
 	default:
 		break;
 	}
@@ -199,10 +220,7 @@ bool	Nginx::run(struct timeval	timeout, unsigned int buffer_size)
 						std::cout << buf; ///////////////////////////////
 
 						if ((client->getStatus() == REQUEST_RECEIVING) && (client->getRequest().tryMakeRequest() == true))
-						{
 							client->getResponse().makeResponse(client->getRequest(), getPerfectLocation(client->getServerSocketFd(), client->getRequest() ), i);
-							client->getRequest().initRequest();
-						}
 					}
 					break ;
 				}
@@ -234,6 +252,7 @@ bool	Nginx::run(struct timeval	timeout, unsigned int buffer_size)
 					if (client->getStatus() == RESPONSE_READY)
 					{
 						write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().size());
+						client->getRequest().initRequest();
 						std::cout << std::endl; /////////////////////////////////////
 						std::cout << client->getResponse().getRawResponse() << std::endl; //////////////////////////////
 						if (client->getResponse().getLastResponse() == 401) // authentication 을 요구할경우 즉시 끊어준다.
@@ -245,6 +264,17 @@ bool	Nginx::run(struct timeval	timeout, unsigned int buffer_size)
 						}
 					}
 					break;
+				}
+				case PIPE:
+				{
+					// 파이프 fd 에 써야한 다는 것!
+					Pipe *pip = dynamic_cast<Pipe *>(this->fds[i]);
+					Client *client = dynamic_cast<Client *>(this->fds[pip->getWriteFromClient()]);
+					std::string &raw_body = client->getRequest().getRawBody();
+					write(pip->getPipeWrite(), raw_body.c_str(), raw_body.size());
+					client->getResponse().makeCgiResponse(client->getRequest(),getPerfectLocation(client->getServerSocketFd(), client->getRequest()), client->getFd(), pip->getPipeRead());
+					clear_connected_socket(pip);
+					break ;
 				}
 				default:
 					break;

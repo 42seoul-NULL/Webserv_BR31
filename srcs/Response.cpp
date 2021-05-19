@@ -390,6 +390,9 @@ int		Response::makeResponse(const Request& request, Location &location, int clie
 	if ( (ret = checkAuth(request, location)) != 200 )
 		return (makeErrorReponse(request, location, ret, client_socket));
 
+	if (isCgiExtension(request, location))
+		return (makeCgiResponse(request, location, client_socket));
+
 	if (request.getMethod() == "GET")
 		return (makeGetResponse(request, location, client_socket));
 	// 여기서부터 else if 로 메소드를 하나씩 붙여갈 예정.
