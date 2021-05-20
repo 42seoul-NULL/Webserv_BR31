@@ -7,37 +7,6 @@
 # include "fdmanager.hpp"
 # include "enums.hpp"
 
-class Server	:	public Fdmanager
-{
-	private	:
-		std::string		ip;
-		unsigned short	port;
-		std::string		server_name;
-		std::map<std::string, Location> locations;
-
-	public	:
-		Server();
-		Server(const Server &src);
-		Server& operator=(const Server &src);
-		virtual	~Server();
-
-		Location	&getPerfectLocation(std::string &uri);
-
-		void	setPort(unsigned short port);
-		void	setIP(const std::string &ip);
-		void	setServerName(const std::string &server_name);
-
-		const std::string &getIP() const;
-		const std::string &getServerName() const;
-		unsigned short	   getPort() const;
-
-		//코딩해야함
-		
-		std::map<std::string, Location> &getLocations();
-		//for test//
-		void	show();
-};
-
 class Location
 {
 	private	:
@@ -82,6 +51,37 @@ class Location
 		std::map<int, std::string> &getErrorPages();
 		const std::string &getUriKey();
 
+		//for test//
+		void	show();
+};
+
+class Server	:	public Fdmanager
+{
+	private	:
+		std::string		ip;
+		unsigned short	port;
+		std::string		server_name;
+		std::map<std::string, Location> locations;
+
+	public	:
+		Server();
+		Server(const Server &src);
+		Server& operator=(const Server &src);
+		virtual	~Server();
+
+		Location	&getPerfectLocation(std::string &uri);
+
+		void	setPort(unsigned short port);
+		void	setIP(const std::string &ip);
+		void	setServerName(const std::string &server_name);
+
+		const std::string &getIP() const;
+		const std::string &getServerName() const;
+		unsigned short	   getPort() const;
+
+		//코딩해야함
+		
+		std::map<std::string, Location> &getLocations();
 		//for test//
 		void	show();
 };

@@ -5,14 +5,14 @@ Client::Client()
 	this->server = NULL;
 	this->fd = -1;
 	this->status = REQUEST_RECEIVING;
-	this->type = CLIENT;
+	this->type = FD_CLIENT;
 }
 
 Client::Client(Server *server, int fd)
 {
 	this->fd = fd;
 	this->status = REQUEST_RECEIVING;
-	this->type = CLIENT;
+	this->type = FD_CLIENT;
 	this->server = server;
 	this->request.setClient(this);
 	this->response.setClient(this);

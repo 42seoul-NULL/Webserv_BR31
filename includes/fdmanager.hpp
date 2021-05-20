@@ -7,7 +7,7 @@ class Fdmanager
 {
 	protected :
 		int				fd;
-		e_type			type;
+		e_fd_type			type;
 
 	public	:
 		Fdmanager();
@@ -15,8 +15,8 @@ class Fdmanager
 
 		void		setFd(int fd);
 		int			getFd() const;
-		e_type		getType() const;
-		void		setType(e_type type);
+		e_fd_type	getType() const;
+		void		setType(e_fd_type type);
 };
 
 #endif

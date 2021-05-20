@@ -268,7 +268,6 @@ void	Nginx::doReadResourceFD(int i)
 	}
 	case CGI_CRASH:
 	{
-		resource->getClient()->getResponse().initResponse(); // 이때까지 만들던거 다 취소해버리고
 		resource->getClient()->getResponse().makeErrorResponse(500); // 에러 리스폰스 만들러감
 		deleteFromFdPool(resource);
 		break ;

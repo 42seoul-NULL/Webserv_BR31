@@ -10,18 +10,18 @@ void	Response::initResponse(void)
 	this->location = NULL;
 }
 
-int		Response::makeResponse()
+void	Response::makeResponse()
 {
 	//여기까지 왔다는 것은 method allow check 되어있고, authcheck 되어있고,
-    if (cgi_extention != "")
-		return (makeCgiResponse());
+    // if (cgi_extention != "")
+	// 	return (makeCgiResponse());
 	if (is_redirection)
 		return (makeRedirectionResponse());
 
 	if (this->client->getRequest().getMethod() == "GET")
 		makeGetResponse();
-	else if (this->client->getRequest().getMethod() == "PUT")
-		makePutResponse();
+	// else if (this->client->getRequest().getMethod() == "PUT")
+	// 	makePutResponse();
 }
 
 
@@ -115,45 +115,6 @@ void	Response::setResource(int fd, e_direction direction, e_nextcall nextcall, i
 	
 }
 
-int		Response::makeAutoIndexPage()
-{
-	initResponse();
-	std::string body;
-	std::string pre_addr = "http://" + this->client->getRequest().getHeaders()[HOST] + "/";
-
-	body += "<!DOCTYPE html>";
-	body += "<html>";
-	body += "<head>";
-	body += "</head>";
-	body += "<body>";
-	body += "<h1> AutoIndex : "+ this->client->getRequest().getUri() +"</h1>";
-
-	DIR *dir = NULL;
-	struct dirent *file = NULL;
-	if ( (dir = opendir(this->resource_path.c_str())) == NULL )
-		return (500);
-	while ( (file = readdir(dir)) != NULL )
-	{
-		std::string file_name(file->d_name);
-		if (file_name != "." && file_name != "..")
-			body += "<a href=\"" + pre_addr + file_name + "\">" + file_name + "</a><br>";
-	}
-	closedir(dir);
-
-	body += "";
-	body += "";
-	body += "</body>";
-	body += "</html>";
-
-	addFirstLine(200);
-	addDate();
-	this->raw_response += "Content-Type: " + Config::getInstance()->getMimeType()[".html"] + "\r\n";
-	this->raw_response += "Content-Length: " + ft_itoa(body.size()) + "\r\n";
-	this->raw_response += "\r\n";
-	this->raw_response += body;
-	return (200);
-}
-
 /////////////// header make 관련 /////////////////
 int		Response::addAllow()
 {
@@ -186,12 +147,6 @@ void	Response::makeDefaultErrorBody(std::string &body, int error)
 }
 
 ///// public method ///////
-int		Response::makeErrorResponse(int error_num)
-{
-	return (error_num);
-}
-
-
 
 int		Response::addFirstLine(int code)
 {

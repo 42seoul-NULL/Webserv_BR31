@@ -6,9 +6,6 @@
 # include <list>
 # include <sys/wait.h>
 # include "fdmanager.hpp"
-# include "server.hpp"
-# include "request.hpp"
-# include "response.hpp"
 # include "client.hpp"
 
 /*
@@ -49,6 +46,6 @@ class Resource	:	public Fdmanager
 		//getter
 		std::string &getRawData();
 		Client		*getClient();
-
 };
+
 #endif

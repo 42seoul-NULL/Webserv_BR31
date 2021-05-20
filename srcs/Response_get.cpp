@@ -2,68 +2,108 @@
 #include "response.hpp"
 #include "nginx.hpp"
 
-int		Response::makeGetResponse()
+void		Response::makeAutoIndexPage()
 {
+	this->raw_response.clear();
+	std::string body;
+	std::string pre_addr = "http://" + this->client->getRequest().getHeaders()[HOST] + "/";
 
+	body += "<!DOCTYPE html>";
+	body += "<html>";
+	body += "<head>";
+	body += "</head>";
+	body += "<body>";
+	body += "<h1> AutoIndex : "+ this->client->getRequest().getUri() +"</h1>";
+
+	DIR *dir = NULL;
+	struct dirent *file = NULL;
+	if ( (dir = opendir(this->resource_path.c_str())) == NULL )
+		return (makeErrorResponse(500));
+	while ( (file = readdir(dir)) != NULL )
+	{
+		std::string file_name(file->d_name);
+		if (file_name != "." && file_name != "..")
+			body += "<a href=\"" + pre_addr + file_name + "\">" + file_name + "</a><br>";
+	}
+	closedir(dir);
+
+	body += "";
+	body += "";
+	body += "</body>";
+	body += "</html>";
+
+	addFirstLine(200);
+	addDate();
+	this->raw_response += "Content-Type: " + Config::getInstance()->getMimeType()[".html"] + "\r\n";
+	this->raw_response += "Content-Length: " + ft_itoa(body.size()) + "\r\n";
+	this->raw_response += "\r\n";
+	this->raw_response += body;
+    this->client->setStatus(RESPONSE_MAKE_DONE);
 }
 
-// int		Response::makeGetBody(const Request& request, Location &location, int client_socket)
-// {
-// 	//여기서 만들기 직전에 addContentType 호출
-// 	int fd;
-// 	struct stat	sb;
-// 	size_t idx;
+void		Response::makeGetResponse()
+{
+    //REQUEST_RECEIVING,
+	//RESPONSE_MAKING,
+	//FILE_READING,
+	//FILE_READ_DONE,
+	//FILE_WRITING,
+	//FILE_WRITE_DONE,
+	//RESPONSE_MAKE_DONE
 
-// 	std::string absol_path = getAbsolutePath(request, location);
+    switch (this->client->getStatus())
+    {
+    case RESPONSE_MAKING:
+    {
+        //여기서 만들기 직전에 addContentType 호출
+        int fd;
+        struct stat	sb;
+        size_t idx;
 
-// 	std::cout << request.getUri() << std::endl;
-// 	std::cout << location.getUriKey() << std::endl;
-// 	std::cout << absol_path << std::endl;
+        if (isDirectory(this->resource_path))
+        {
+            bool is_exist = false;
+            std::string temp_path;
+            for (std::list<std::string>::iterator iter = this->location->getIndex().begin(); iter != this->location->getIndex().end(); iter++)
+            {
+                temp_path = (this->resource_path + (*iter));
+                if ((is_exist = isExist(temp_path)) == true)
+                    break ;
+            }
+            if (is_exist == false && this->location->getAutoIndex())
+                return (makeAutoIndexPage());
+        }
+        if (!isExist(this->resource_path))
+            return (makeErrorResponse(404));
 
-// 	if (isDirectory(absol_path))
-// 	{
-// 		if ( *(--absol_path.end()) != '/')
-// 			absol_path += '/';
+        idx = this->resource_path.find_first_of('/');
+        idx = this->resource_path.find_first_of('.',idx);
 
-// 		bool is_exist = false;
-// 		std::string temp_path;
-// 		for (std::list<std::string>::iterator iter = location.getIndex().begin(); iter != location.getIndex().end(); iter++)
-// 		{
-// 			temp_path = (absol_path + (*iter));
-// 			if ((is_exist = isExist(temp_path)) == true)
-// 				break ;
-// 		}
-// 		if (is_exist == false && location.getAutoIndex())
-// 			return (makeAutoIndexPage(request, absol_path));
-// 		absol_path = temp_path;
-// 	}
-// 	if (!isExist(absol_path))
-// 		return (404);
+        if (idx == std::string::npos) // 확장자가 없다.
+            addContentType(".bin");
+        else
+            addContentType(this->resource_path.substr(idx));
 
-// 	idx = absol_path.find_first_of('/');
-// 	idx = absol_path.find_first_of('.',idx);
+        if ((fd = open(this->resource_path.c_str(), O_RDONLY)) < 0)
+            return (makeErrorResponse(500));
+        if (fstat(fd, &sb) < 0)
+        {
+            close(fd);
+            return (makeErrorResponse(500));
+        }
+        addContentLength((int)sb.st_size);
+        this->raw_response += "\r\n";
 
-// 	if (idx == std::string::npos) // 확장자가 없다.
-// 		addContentType(request, "application/octet-stream");
-// 	else
-// 		addContentType(request, Config::getInstance()->getMimeType()[absol_path.substr(idx)]);
-
-// 	if ((fd = open(absol_path.c_str(), O_RDONLY)) < 0)
-// 		return (500);
-// 	if (fstat(fd, &sb) < 0)
-// 	{
-// 		close(fd);
-// 		return (500);
-// 	}
-// 	addContentLength((int)sb.st_size);
-// 	addLastModified(request, location);
-// 	this->raw_response += "\r\n";
-
-// 	Resource *resrc = new Resource();
-// 	resrc->setFd(fd);
-// 	resrc->setFdReadTo(client_socket);
-// 	Config::getInstance()->getNginx()->insert_pull(resrc);
-// 	(dynamic_cast<Client *>(Config::getInstance()->getNginx()->getFds()[client_socket]))->setStatus(BODY_WRITING);
-// 	return (200);
-// }
-
+        setResource(fd, FD_TO_RAW_DATA, MAKE_RESPONSE);
+        return ;
+        break;
+    }
+    case FILE_READ_DONE:
+    {
+        this->client->setStatus(RESPONSE_MAKE_DONE);
+        break ;
+    }
+    default:
+        break;
+    }
+}

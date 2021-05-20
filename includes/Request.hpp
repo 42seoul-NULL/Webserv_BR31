@@ -38,8 +38,6 @@ Request 책임/권한
 - 주요 변경 header -> map< key, value > 로 변경
 */
 
-class Client;
-
 class Request
 {
 	private:

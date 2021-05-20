@@ -4,11 +4,12 @@ SRCNAME	=	main.cpp\
 			config.cpp\
 			request.cpp\
 			response.cpp\
+			response_common.cpp\
 			response_get.cpp\
-			response_put.cpp\
-			response_cgi.cpp\
+			response_redirection.cpp\
 			fdmanager.cpp\
 			nginx.cpp
+
 SRCDIR = ./srcs/
 SRCS = $(addprefix $(SRCDIR), $(SRCNAME))
 

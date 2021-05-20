@@ -14,7 +14,6 @@
 class Request;
 class Server;
 class Location;
-class Client;
 
 /*
 Response 책임/권한
@@ -49,15 +48,15 @@ class Response
 		
 		//response_common
 		void	initResponse(void);
-		int		makeResponse();
-		int		makeErrorResponse(int error_num);
+		void	makeResponse();
+		void	makeErrorResponse(int error_num);
 		//int		makeCgiResponse();
 
 	private :
 		bool	isExist(std::string &path);
 		bool	isDirectory(std::string &path);
 		void	makeDefaultErrorBody(std::string &body, int error);
-		int		makeAutoIndexPage();
+		void	makeAutoIndexPage();
 		void	setResource(int fd, e_direction direction, e_nextcall nextcall, int error_num = -1);
 
 		int		addFirstLine(int code);
