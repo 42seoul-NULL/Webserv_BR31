@@ -6,13 +6,17 @@
 # include <ctime>
 # include <sys/stat.h>
 # include <dirent.h>
-# include "Request.hpp"
+# include "request.hpp"
 
 class Request;
 class Server;
 class Location;
 class Client;
 
+/*
+Response 책임/권한
+- 
+*/
 class Response
 {
 	private:
@@ -21,6 +25,7 @@ class Response
 		std::string	resource_path; // 이전 absolute path
 		Client	*client;
 		Location *location;
+		std::string cgi_extention;
 
 		void	makeDefaultBody(std::string &body, int error);
 		int		makeAutoIndexPage(const Request& request, const std::string &path);
@@ -55,9 +60,7 @@ class Response
 
 	public:
 		Response(void);
-		Response(const Response& src);
 		virtual ~Response(void);
-		Response&	operator=(const Response& src);
 
 		void	initResponse(void);
 		
@@ -65,10 +68,11 @@ class Response
 		void	setLocation(Location *location);
 		void	setClient(Client *client);
 		void	setResourcePath(const std::string &resource_path);
+		void	setCgiExtention(const std::string &cgi_extention);
 		//	추가됨
 
-
-		int		makeResponse(const Request& request, Location& location, int client_socket);
+		int		makeResponse();
+		int		makeErrorResponse(int error_num);
 		std::string&	getRawResponse(void);
 		int		getLastResponse();
 		int		makeCgiResponse(const Request& request, Location& location, int client_socket, int cgi_stdin_fd = -1);

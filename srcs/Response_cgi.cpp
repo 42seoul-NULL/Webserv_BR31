@@ -1,6 +1,6 @@
-#include "../includes/parser.hpp"
-#include "../includes/Response.hpp"
-#include "../includes/nginx.hpp"
+#include "config.hpp"
+#include "response.hpp"
+#include "nginx.hpp"
 
 bool	Response::isCgiExtension(const Request& request, Location& location)
 {

@@ -1,5 +1,5 @@
-#include "parser.hpp"
-#include "Response.hpp"
+#include "config.hpp"
+#include "response.hpp"
 #include "nginx.hpp"
 
 int		Response::makeDirectoryToCreate(const Request& request, Location &location)

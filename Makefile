@@ -1,12 +1,13 @@
 NAME = webserv
 
 SRCNAME	=	main.cpp\
-			parser.cpp\
-			Request.cpp\
-			Response.cpp\
-			Response_get.cpp\
-			Response_put.cpp\
-			Response_cgi.cpp\
+			config.cpp\
+			request.cpp\
+			response.cpp\
+			response_get.cpp\
+			response_put.cpp\
+			response_cgi.cpp\
+			fdmanager.cpp\
 			nginx.cpp
 SRCDIR = ./srcs/
 SRCS = $(addprefix $(SRCDIR), $(SRCNAME))

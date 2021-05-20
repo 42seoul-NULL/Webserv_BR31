@@ -1,5 +1,5 @@
-#include "Response.hpp"
-#include "parser.hpp"
+#include "response.hpp"
+#include "config.hpp"
 #include "nginx.hpp"
 
 Response::Response(void)
@@ -21,46 +21,6 @@ Response&	Response::operator=(const Response& src)
 {
 	this->raw_response = src.raw_response;
 	return (*this);
-}
-
-int		 	Response::base64_decode(const char * text, char * dst, int numBytes)
-{
-    const char* cp;
-    int space_idx = 0, phase;
-    int d, prev_d = 0;
-    char c;
-    space_idx = 0;
-    phase = 0;
-    for (cp = text; *cp != '\0'; ++cp) {
-        d = Config::decodeMimeBase64[(int)*cp];
-        if (d != -1) {
-            switch (phase) {
-            case 0:
-                ++phase;
-                break;
-            case 1:
-                c = ((prev_d << 2) | ((d & 0x30) >> 4));
-                if (space_idx < numBytes)
-                    dst[space_idx++] = c;
-                ++phase;
-                break;
-            case 2:
-                c = (((prev_d & 0xf) << 4) | ((d & 0x3c) >> 2));
-                if (space_idx < numBytes)
-                    dst[space_idx++] = c;
-                ++phase;
-                break;
-            case 3:
-                c = (((prev_d & 0x03) << 6) | d);
-                if (space_idx < numBytes)
-                    dst[space_idx++] = c;
-                phase = 0;
-                break;
-            }
-            prev_d = d;
-        }
-    }
-    return space_idx;
 }
 
 bool	Response::isExist(std::string &path)
@@ -131,64 +91,64 @@ int		Response::checkAuth(const Request &request, Location &location)
 	return (401);
 }
 
-int		Response::makeErrorReponse(const Request &request, Location &location, int error, int client_socket)
-{
-	initResponse();
+// int		Response::makeErrorReponse(const Request &request, Location &location, int error, int client_socket)
+// {
+// 	initResponse();
 
-	//디폴트 에러 페이지 존재할경우 이것으로 처리.
+// 	//디폴트 에러 페이지 존재할경우 이것으로 처리.
 
-	std::string body;
-	body.clear();
+// 	std::string body;
+// 	body.clear();
 
 
-	makeFirstLine(error);
-	this->raw_response += "Allow:";
-	for (std::list<std::string>::iterator iter = location.getAllowMethods().begin(); iter != location.getAllowMethods().end(); iter++)
-	{
-		raw_response += ' ';
-		raw_response += *iter;
-	}
-	raw_response += "\r\n";
-	makeDate(request);
-	this->raw_response += "Content-Type: " + Config::getInstance()->getMimeType()[".html"] + "\r\n";
-	if (error == 401)
-		makeWWWAuthenticate();
-	if (location.getErrorPages().find(error) == location.getErrorPages().end())
-	{
-		makeDefaultBody(body, error);
-		this->raw_response += "Content-Length: " + ft_itoa(body.size()) + "\r\n";
-	}
-	else
-	{
-		int fd;
+// 	makeFirstLine(error);
+// 	this->raw_response += "Allow:";
+// 	for (std::list<std::string>::iterator iter = location.getAllowMethods().begin(); iter != location.getAllowMethods().end(); iter++)
+// 	{
+// 		raw_response += ' ';
+// 		raw_response += *iter;
+// 	}
+// 	raw_response += "\r\n";
+// 	makeDate(request);
+// 	this->raw_response += "Content-Type: " + Config::getInstance()->getMimeType()[".html"] + "\r\n";
+// 	if (error == 401)
+// 		makeWWWAuthenticate();
+// 	if (location.getErrorPages().find(error) == location.getErrorPages().end())
+// 	{
+// 		makeDefaultBody(body, error);
+// 		this->raw_response += "Content-Length: " + ft_itoa(body.size()) + "\r\n";
+// 	}
+// 	else
+// 	{
+// 		int fd;
 
-		fd = open(location.getErrorPages()[error].c_str(), O_RDONLY);
-		if (fd < 0)
-		{
-			makeDefaultBody(body, error);
-			this->raw_response += "Content-Length: " + ft_itoa(body.size()) + "\r\n";
-		}
-		else
-		{
-			struct stat	sb;
-			if (fstat(fd, &sb) < 0)
-			{
-				close(fd);
-					return (this->last_reponse = error);
-			}
-			makeContentLength((int)sb.st_size);
-			Resource *resrc = new Resource();
-			resrc->setFd(fd);
-			resrc->setFdReadTo(client_socket);
-			Config::getInstance()->getNginx()->insert_pull(resrc);
-			(dynamic_cast<Client *>(Config::getInstance()->getNginx()->getFds()[client_socket]))->setStatus(BODY_WRITING);
-		}
-	}
-	this->raw_response += "\r\n";
-	if (body.size() != 0)
-		this->raw_response += body;
-	return (this->last_reponse = error);
-}
+// 		fd = open(location.getErrorPages()[error].c_str(), O_RDONLY);
+// 		if (fd < 0)
+// 		{
+// 			makeDefaultBody(body, error);
+// 			this->raw_response += "Content-Length: " + ft_itoa(body.size()) + "\r\n";
+// 		}
+// 		else
+// 		{
+// 			struct stat	sb;
+// 			if (fstat(fd, &sb) < 0)
+// 			{
+// 				close(fd);
+// 					return (this->last_reponse = error);
+// 			}
+// 			makeContentLength((int)sb.st_size);
+// 			Resource *resrc = new Resource();
+// 			resrc->setFd(fd);
+// 			resrc->setFdReadTo(client_socket);
+// 			Config::getInstance()->getNginx()->insert_pull(resrc);
+// 			(dynamic_cast<Client *>(Config::getInstance()->getNginx()->getFds()[client_socket]))->setStatus(BODY_WRITING);
+// 		}
+// 	}
+// 	this->raw_response += "\r\n";
+// 	if (body.size() != 0)
+// 		this->raw_response += body;
+// 	return (this->last_reponse = error);
+// }
 
 int		Response::makeContentLanguage()
 {

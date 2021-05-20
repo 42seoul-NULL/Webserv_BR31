@@ -1,5 +1,5 @@
-#include "parser.hpp"
-#include "Response.hpp"
+#include "config.hpp"
+#include "response.hpp"
 #include "nginx.hpp"
 
 int		Response::makeGetBody(const Request& request, Location &location, int client_socket)
