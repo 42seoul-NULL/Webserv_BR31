@@ -29,7 +29,6 @@ Request&	Request::operator=(const Request& src)
 	this->user_agent = src.user_agent;
 	this->status = 0;
 	this->type = 0;
-
 	return (*this);
 }
 
@@ -43,9 +42,9 @@ std::string&	Request::getRawBody(void)
 	return (this->raw_body);
 }
 
-const std::string&	Request::getRawBody(void) const
+std::string&	Request::getRawBody(void) const
 {
-	return (this->raw_body);
+	return (const_cast<std::string &>(this->raw_body));
 }
 
 const std::string&	Request::getMethod(void) const

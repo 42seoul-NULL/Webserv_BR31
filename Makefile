@@ -6,6 +6,7 @@ SRCNAME	=	main.cpp\
 			Response.cpp\
 			Response_get.cpp\
 			Response_put.cpp\
+			Response_cgi.cpp\
 			nginx.cpp
 SRCDIR = ./srcs/
 SRCS = $(addprefix $(SRCDIR), $(SRCNAME))

@@ -400,8 +400,6 @@ int		Fdmanager::getFd() const
 //////////////// class Fdmanager end ////////////////////
 /////////////////////////////////////////////////////////
 
-
-
 /////////////////////////////////////////////////////////
 /////////////// class Resource start ////////////////////
 Resource::Resource() : fd_read_to(-1), fd_write_from(-1)
@@ -441,12 +439,12 @@ int		Resource::getFdWriteFrom()
 
 /////////////////////////////////////////////////////////
 //////////////////// class Pipe start ///////////////////
-Pipe::Pipe() : pipe_read(-1), pipe_write(-1), read_from_fd(-1), write_from_client(-1)
+Pipe::Pipe() : pipe_read(-1), pipe_write(-1), write_from_client(-1), read_from_fd(-1)
 {
 	this->type = PIPE;
 }
 
-Pipe::Pipe(int fd) : pipe_read(-1), pipe_write(-1), read_from_fd(-1), write_from_client(-1)
+Pipe::Pipe(int fd) : pipe_read(-1), pipe_write(-1),write_from_client(-1), read_from_fd(-1)
 {
 	this->fd = fd;
 	this->type = PIPE;

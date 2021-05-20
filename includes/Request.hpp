@@ -43,7 +43,6 @@ class Request
 		std::string&	getRawRequest(void);
 		std::string&	getRawBody(void);
 		const std::string&	getRawBody(void) const;
-		const std::string&	getRawBody(void) const;
 		const std::string&	getMethod(void) const;
 		const std::string&	getUri(void) const;
 		const std::string&	getHttpVersion(void) const;
@@ -57,21 +56,6 @@ class Request
 		const std::string&	getReferer(void) const;
 		const std::string&	getTransferEncoding(void) const;
 		const std::string&	getUserAgent(void) const;
-
-		void	setRawRequest(const std::string& raw_request);
-		void	setMethod(const std::string& method);
-		void	setUri(const std::string& uri);
-		void	setHttpVersion(const std::string& http_version);
-		void	setAcceptCharsets(const std::string& accept_charsets);
-		void	setAcceptLanguage(const std::string& accept_language);
-		void	setAuthorization(const std::string& authorization);
-		void	setContentLength(const std::string& content_length);
-		void	setContentType(const std::string& content_type);
-		void	setDate(const std::string& date);
-		void	setHost(const std::string& host);
-		void	setReferer(const std::string& referer);
-		void	setTransferEncoding(const std::string& transfer_encoding);
-		void	setUserAgent(const std::string& user_agent);
 
 		void	initRequest(void);
 		bool	tryMakeRequest(void);

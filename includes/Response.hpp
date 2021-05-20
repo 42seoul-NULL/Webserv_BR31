@@ -11,12 +11,17 @@
 class Request;
 class Server;
 class Location;
+class Client;
 
 class Response
 {
 	private:
 		int		last_reponse;
 		std::string raw_response;
+		std::string	resource_path; // 이전 absolute path
+		Client	*client;
+		Location *location;
+
 		void	makeDefaultBody(std::string &body, int error);
 		int		makeAutoIndexPage(const Request& request, const std::string &path);
 		bool	isExist(std::string &path);
@@ -53,7 +58,16 @@ class Response
 		Response(const Response& src);
 		virtual ~Response(void);
 		Response&	operator=(const Response& src);
+
 		void	initResponse(void);
+		
+		//	추가됨
+		void	setLocation(Location *location);
+		void	setClient(Client *client);
+		void	setResourcePath(const std::string &resource_path);
+		//	추가됨
+
+
 		int		makeResponse(const Request& request, Location& location, int client_socket);
 		std::string&	getRawResponse(void);
 		int		getLastResponse();

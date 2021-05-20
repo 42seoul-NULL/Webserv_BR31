@@ -17,18 +17,32 @@
 typedef enum			t_status
 {
 	REQUEST_RECEIVING,
-	BODY_WRITING,
-	RESPONSE_READY
+	RESPONSE_MAKING,
+	FILE_READING,
+	FILE_READ_DONE,
+	FILE_WRITING,
+	FILE_WRITE_DONE,
+	RESPONSE_MAKE_DONE
 }						e_status;
 
 typedef enum			t_type
 {
 	SERVER,
 	CLIENT,
-	RESOURCE,
-	PIPE,
-	BASE
+	RESOURCE
 }						e_type;
+
+typedef enum			t_direction
+{
+	RAW_RES_TO_FD,
+	FD_TO_RAW_RES
+}						e_direction;
+
+typedef enum			t_nextcall
+{
+	MAKE_ERROR_RESPONSE,
+	MAKE_RESPONSE
+}						e_nextcall;
 
 class Location;
 class Server;
@@ -43,7 +57,6 @@ class Config
 		Config& operator=(const Config& src);
 		bool	returnFalseWithMsg(const char *str);
 		bool	isReserved(const std::string &src);
-
 
 		std::map<std::string, Server> servers;
 		static Config*	instance;
@@ -87,65 +100,45 @@ class Fdmanager
 class Resource	:	public Fdmanager
 {
 	private :
-		int				fd_read_to;
-		int				fd_write_from;
+		std::string &raw_resource;
+		int			pid;
+		int			response_error_num;
+		Client		*client;
 
-	public	:
+		e_direction	direction;
+		e_nextcall	next_call;
+
 		Resource();
-		virtual ~Resource();
-
-		void		setFdReadTo(int fd_read_to);
-		void		setFdWriteFrom(int fd_write_from);
-
-		int			getFdReadTo();
-		int			getFdWriteFrom();
-};
-
-class Pipe		:	public Fdmanager
-{
-	private :
-		int		pipe_read;   // 파이프를 뜨면 fds[1] 에 써주고, fds[0] 에서 읽어주면 된다.
-		int		pipe_write;
-
-		int		write_from_client;
-		int		read_from_fd;
-
 	public	:
-		Pipe();
-		Pipe(int fd);
-		virtual ~Pipe();
+		Resource(int fd, std::string& raw_resource, Client *client, e_direction direction, e_nextcall next_call);
+		bool isReady();
+		void changeClientStatus();
 
-		int		getPipeRead();
-		int		getPipeWrite();
-		int		getWriteFromClient();
-		int		getReadFromFd();
+		std::string &getRawResource();
+		e_direction	getDirection();
+		e_nextcall	getNextCall();
 
-		void	setPipeRead(int pipe_read);
-		void	setPipeWrite(int pipe_write);
-		void	setWriteFromClient(int write_from_client);
-		void	setReadFromFd(int read_from_fd);
+		virtual ~Resource();
 };
 
 class Client	:	public Fdmanager
 {
 	private	:
 		t_status		status;
-		int				server_socket_fd;
+		Server	*		server;
 		Request			request;
 		Response		response;
 		unsigned long	last_request_ms;
-
-	public	:
 		Client();
-		Client(int server_socket_fd, int fd);
+	public	:
+		Client(Server* server, int fd);
 		virtual ~Client();
 
-		void		setServerSocketFd(int server_socket_fd);
 		void		setStatus(t_status status);
 		void		setRemainBody(long long remain_body);
 		void		setLastRequestMs(unsigned long last_request_ms);
 
-		int			getServerSocketFd();
+		Server *	getServer();
 		Request		&getRequest();
 		Response		&getResponse();
 		t_status	getStatus();
@@ -175,6 +168,10 @@ class Server	:	public Fdmanager
 		const std::string &getServerName() const;
 		unsigned short	   getPort() const;
 
+		//코딩해야함
+		Location	&getPerfectLocation(const std::string &uri);
+		//
+
 		std::map<std::string, Location> &getLocations();
 		//for test//
 		void	show();
@@ -193,7 +190,6 @@ class Location
 		std::string		upload_path;
 		bool			auto_index;
 		std::string		auth_key;
-
 		int				redirect_return;
 		std::string		redirect_addr;
 

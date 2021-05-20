@@ -14,6 +14,7 @@ bool	Response::isCgiExtension(const Request& request, Location& location)
 
 char	**Response::makeEnv(const Request& request, Location& location)
 {
+	(void)location;
 	std::map<std::string, std::string> tmap;
 	tmap["CONTENT_LENGTH"]=ft_itoa(request.getRawBody().size());
 	tmap["GATEWAY_INTERFACE"]="CGI/1.1";
@@ -39,8 +40,11 @@ char	**Response::makeEnv(const Request& request, Location& location)
 	return (ret);
 }
 
-int		Response::makeCgiResponse(const Request& request, Location& location, int client_socket, int cgi_stdin_fd = -1)
+int		Response::makeCgiResponse(const Request& request, Location& location, int client_socket, int cgi_stdin_fd)
 {
+	(void)request;
+	(void)location;
+
 	Client *cli = dynamic_cast<Client *>(Config::getInstance()->getNginx()->getFds()[client_socket]);
 
 	// 여기까지 왔다면 allow method 와 first line 은 세팅이 되어있다.
@@ -71,12 +75,11 @@ int		Response::makeCgiResponse(const Request& request, Location& location, int c
 			//child
 			dup2(cgi_stdin_fd, 0);
 			dup2(fds[1], 1);
-
-			
 		}
 		else
 		{
 			//parent
 		}
-	}	
+	}
+	return (200);	
 }
