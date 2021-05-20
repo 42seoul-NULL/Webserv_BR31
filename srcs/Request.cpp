@@ -72,9 +72,9 @@ std::map<std::string, std::string>&	Request::getHeaders(void) const
 	return (const_cast<std::map<std::string, std::string>& > (this->headers));
 }
 
-const	std::string&	Request::getRawBody(void) const
+std::string&	Request::getRawBody(void) const
 {
-	return (this->raw_body);
+	return (const_cast<std::string &>(this->raw_body));
 }
 
 ///////////////// private func ///////////////////////
@@ -137,7 +137,6 @@ e_request_try_make_request_return	Request::requestValidCheck(bool isComplete)
 
 		//set response resource_path
 		std::string resource_path = loc.getRoot() + this->uri.substr(loc.getUriKey().size());
-
 		this->client->getResponse().setResourcePath(resource_path);
 		
 		//set response cgi_extention
@@ -149,6 +148,12 @@ e_request_try_make_request_return	Request::requestValidCheck(bool isComplete)
 				break ;
 			}
 		}
+
+		//set is_redirection
+		if (loc.getRedirectReturn() != -1)
+			this->client->getResponse().setIsRedirection(true);
+
+		return (READY_TO_MAKE_RESPONSE);
 	}
 }
 
@@ -279,7 +284,7 @@ bool	Request::isValidAuthHeader(Location &loc)
 				
 		if (this->headers.find(AUTHRIZATION) == this->headers.end())  // auth key 헤더가 아예 안들어왔다.
 		{		
-			this->client->getResponse().makeErrorReponse(401);
+			this->client->getResponse().makeErrorResponse(401);
 			return (false);
 		}
 		else
@@ -289,7 +294,7 @@ bool	Request::isValidAuthHeader(Location &loc)
 			base64_decode(secret.c_str(), result, secret.size());
 			if (std::string(result) != loc.getAuthKey()) // 키가 맞지 않는다.
 			{
-				this->client->getResponse().makeErrorReponse(401);
+				this->client->getResponse().makeErrorResponse(401);
 				return (false);
 			}
 		}
@@ -310,7 +315,7 @@ bool	Request::isValidMethod(Location &loc)
 	}
 	if (isAllowCheckOkay != true) // allow method check 가 안되었다. -> 405
 	{
-		this->client->getResponse().makeErrorReponse(405);
+		this->client->getResponse().makeErrorResponse(405);
 		return (false);
 	}
 	return (true);

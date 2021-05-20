@@ -7,6 +7,9 @@
 # include <sys/stat.h>
 # include <dirent.h>
 # include "request.hpp"
+# include "resource.hpp"
+# include "enums.hpp"
+# include "nginx.hpp"
 
 class Request;
 class Server;
@@ -21,61 +24,66 @@ class Response
 {
 	private:
 		int		last_reponse;
+		Client	*client;
+
 		std::string raw_response;
 		std::string	resource_path; // 이전 absolute path
-		Client	*client;
 		Location *location;
 		std::string cgi_extention;
+		bool	is_redirection;
 
-		void	makeDefaultBody(std::string &body, int error);
-		int		makeAutoIndexPage(const Request& request, const std::string &path);
-		bool	isExist(std::string &path);
-		bool	isDirectory(std::string &path);
-		int		checkAuth(const Request& request, Location& location);
-		int		base64_decode(const char *text, char *dst, int numBytes);
-		int		makeErrorReponse(const Request& request, Location& location, int error, int client_socket);
-
-		int		makeFirstLine(int code);
-		int		makeAllow(const Request& request, Location& location);
-		int		makeContentLanguage(void);
-		int		makeContentLength(int size);
-		int		makeContentLocation(const Request& request, Location &location);
-		int		makeContentType(const Request& request, const std::string &mime_type);
-		int		makeDate(const Request& request);
-		int		makeLastModified(const Request& request, Location &location);
-		int		makeLocation(Location &location);
-		int		makeRetryAfter();
-		int		makeServer();
-		int		makeWWWAuthenticate();
-		std::string	getAbsolutePath(const Request& request, Location& location);
-		int		makeGetBody(const Request& request, Location &location, int client_socket);
-		int		makeRedirectionResponse(const Request& request, Location& location, int client_socket);
-		int		makeGetResponse(const Request& request, Location& location, int client_socket);
-
-		bool	isCgiExtension(const Request& request, Location& location);
-		char	**makeEnv(const Request& request, Location& location);
-		int		makePutResponse(const Request& request, Location& location, int client_socket);
-		int		makeDirectoryToCreate(const Request& request, Location &location);
-		int		createPutRequest(const Request& request, Location &location, int client_socket);
-
-	public:
+	public :
 		Response(void);
 		virtual ~Response(void);
-
-		void	initResponse(void);
 		
-		//	추가됨
+		//getter
+		int		getLastResponse();
+		std::string&	getRawResponse(void);
+		
+		//setter
 		void	setLocation(Location *location);
 		void	setClient(Client *client);
 		void	setResourcePath(const std::string &resource_path);
 		void	setCgiExtention(const std::string &cgi_extention);
-		//	추가됨
-
+		void	setIsRedirection(bool is_redirection);
+		
+		//response_common
+		void	initResponse(void);
 		int		makeResponse();
 		int		makeErrorResponse(int error_num);
-		std::string&	getRawResponse(void);
-		int		getLastResponse();
-		int		makeCgiResponse(const Request& request, Location& location, int client_socket, int cgi_stdin_fd = -1);
+		//int		makeCgiResponse();
+
+	private :
+		bool	isExist(std::string &path);
+		bool	isDirectory(std::string &path);
+		void	makeDefaultErrorBody(std::string &body, int error);
+		int		makeAutoIndexPage();
+		void	setResource(int fd, e_direction direction, e_nextcall nextcall, int error_num = -1);
+
+		int		addFirstLine(int code);
+		int		addAllow();
+		int		addContentLanguage();
+		int		addContentLength(int size);
+		int		addContentLocation();
+		int		addContentType(const std::string &mime_type);
+		int		addDate();
+		int		addLastModified();
+		int		addLocation();
+		int		addRetryAfter();
+		int		addServer();
+		int		addWWWAuthenticate();
+		void	addRawErrorBody();
+
+		//response_get
+		void	makeGetResponse();
+		void	makeRedirectionResponse();
+
+		//response_put
+		// int		makePutResponse();
+		// int		makeDirectoryToCreate();
+		// int		createPutRequest();
+		
+		// char	**makeEnv();
 };
 
 #endif

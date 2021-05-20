@@ -34,7 +34,7 @@ class Resource	:	public Fdmanager
 		e_nextcall	next_call;
 
 	public	:
-		Resource(int fd, std::string& raw_data, Client *client, e_direction direction, e_nextcall next_call);
+		Resource(int fd, std::string& raw_data, Client *client, e_direction direction, e_nextcall next_call, int response_error_num);
 		virtual ~Resource();
 
 		//method

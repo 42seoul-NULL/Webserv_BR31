@@ -12,7 +12,23 @@
 # define NEEDBODY -1
 # define REQUESTCOMPLETE -2
 
-# define AUTHRIZATION "Authorization"
+# define DATE "Date"
+# define ALLOW "Allow"
+# define CONTENT_LANGUAGE "Content_Language"
+# define CONTENT_LOCATION "Content-Location"
+# define CONTENT_TYPE "Content-Type"
+# define AUTHORIZATION "Authorization"
+# define WWW_AUTHENTICATE "WWW-Authenticate"
+# define HOST "Host"
+# define ACCEPT_CHARSET "Accept-Charset"
+# define ACCEPT_LANGUAGE "Accept-Language"
+# define REFERER "Referer"
+# define USER_AGENT "User-Agent"
+# define SERVER "Server"
+# define TRANSFER_ENCODING "Transfer-Encoding"
+# define LOCATION "Location"
+# define LAST_MODIFIED "Last-Modified"
+# define RETRY_AFTER "Retry-After"
 
 /*
 Request 책임/권한
@@ -57,8 +73,7 @@ class Request
 		const std::string&	getUri(void) const;
 		const std::string&	getHttpVersion(void) const;
 		std::map<std::string, std::string>&	getHeaders(void) const;
-		const std::string&	getRawBody(void) const;
-
+		std::string&	getRawBody(void) const;
 
 	private:
 		int		 	base64_decode(const char * text, char * dst, int numBytes);

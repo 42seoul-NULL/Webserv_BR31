@@ -166,6 +166,11 @@ bool	Config::returnFalseWithMsg(const char *str)
 	return (false);
 }
 
+void	Config::setNginx(Nginx* nginx)
+{
+	this->nginx = nginx;
+}
+
 std::map<std::string, Server> &Config::getServers()
 {
 	return (this->servers);
@@ -179,6 +184,11 @@ std::map<std::string, std::string> &Config::getMimeType()
 std::map<std::string, std::string> &Config::getStatusCode()
 {
 	return (this->status_code);
+}
+
+Nginx 	*Config::getNginx()
+{
+	return (this->nginx);
 }
 
 bool	Config::isReserved(const std::string &src)

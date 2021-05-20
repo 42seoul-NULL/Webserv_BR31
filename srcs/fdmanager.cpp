@@ -16,13 +16,13 @@ void Fdmanager::setFd(int fd)
 	return ;
 }
 
-void	Fdmanager::setType(e_type type)
+void	Fdmanager::setType(e_fd_type type)
 {
 	this->type = type;
 	return ;
 }
 
-e_type	Fdmanager::getType() const
+e_fd_type	Fdmanager::getType() const
 {
 	return (this->type);
 }

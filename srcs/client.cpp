@@ -22,7 +22,7 @@ Client::~Client()
 {
 
 }
-
+//setter
 void	Client::setLastRequestMs(unsigned long last_request_ms)
 {
 	this->last_request_ms = last_request_ms;
@@ -34,6 +34,17 @@ void	Client::setStatus(e_client_status status)
 	return ;
 }
 
+void		Client::setFdRead(int fd_read)
+{
+	this->fd_read = fd_read;
+}
+
+void		Client::setFdWrite(int fd_write)
+{
+	this->fd_write = fd_write;
+}
+
+//getter
 e_client_status	Client::getStatus()
 {
 	return (this->status);
@@ -57,4 +68,14 @@ Response	&Client::getResponse()
 unsigned long	Client::getLastRequestMs()
 {
 	return (this->last_request_ms);
+}
+
+int		Client::getFdRead()
+{
+	return (this->fd_read);
+}
+
+int		Client::getFdWrite()
+{
+	return (this->fd_write);
 }

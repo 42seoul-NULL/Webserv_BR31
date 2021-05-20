@@ -24,6 +24,8 @@ Config 책임/권한
 - 응답 status code/설명 map을 보유
 - base_64 디코딩 map을 보유
 */
+class Nginx;
+
 class Config
 {
 	private :
@@ -32,6 +34,8 @@ class Config
 		Config& operator=(const Config& src);
 		bool	returnFalseWithMsg(const char *str);
 		bool	isReserved(const std::string &src);
+
+		Nginx *nginx;
 
 		std::map<std::string, Server> servers;
 		static Config*	instance;
@@ -42,11 +46,18 @@ class Config
 		virtual ~Config();
 		static Config* getInstance();
 		static const int decodeMimeBase64[256];
+	
+		//method
+		bool	makeConfig(const char *path);
 
+		//setter
+		void	setNginx(Nginx *nginx);
+
+		//getter
 		std::map<std::string, Server>& getServers();
 		std::map<std::string, std::string>& getMimeType();
 		std::map<std::string, std::string>& getStatusCode();
-		bool	makeConfig(const char *path);
+		Nginx	*getNginx();
 
 		//for test
 		void	show();

@@ -32,7 +32,7 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 
 	switch (fdmanager->getType())
 	{
-	case CLIENT:
+	case FD_CLIENT:
 	{
 		fcntl(fd, F_SETFL, O_NONBLOCK);
 		FT_FD_SET(fd, &(this->reads));
@@ -43,7 +43,7 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 		this->fd_pool[fd] = fdmanager;
 		break ;
 	}
-	case RESOURCE:
+	case FD_RESOURCE:
 	{
 		Resource *res = dynamic_cast<Resource *>(fdmanager);
 		if (res->isFdToRawData()) // read해서 어딘가의 client 의 raw 에 적어야한다.
@@ -137,17 +137,17 @@ bool	Nginx::run()
 			{
 				switch (this->fd_pool[i]->getType())
 				{
-				case SERVER:
+				case FD_SERVER:
 				{
 					doReadServerFd(i);
 					break;
 				}
-				case CLIENT:
+				case FD_CLIENT:
 				{
 					doReadClientFD(i);
 					break ;
 				}
-				case RESOURCE:  // read 다 -> 적혀있는 타겟 클라이언트 response 에 적어주면 된다.
+				case FD_RESOURCE:  // read 다 -> 적혀있는 타겟 클라이언트 response 에 적어주면 된다.
 				{
 					doReadResourceFD(i);
 					break ;
@@ -160,12 +160,12 @@ bool	Nginx::run()
 			{
 				switch (this->fd_pool[i]->getType())
 				{
-				case CLIENT:
+				case FD_CLIENT:
 				{
 					doWriteClientFD(i);
 					break;
 				}
-				case RESOURCE:
+				case FD_RESOURCE:
 				{
 					doWriteResourceFD(i);
 					break ;

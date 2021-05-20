@@ -29,13 +29,13 @@ typedef enum			t_body_length_info
 	CHUNKED
 }						e_body_length_info;
 
-typedef enum			t_type
+typedef enum			t_fd_type
 {
-	BASE,
-	SERVER,
-	CLIENT,
-	RESOURCE
-}						e_type;
+	FD_BASE,
+	FD_SERVER,
+	FD_CLIENT,
+	FD_RESOURCE
+}						e_fd_type;
 
 typedef enum			t_direction
 {

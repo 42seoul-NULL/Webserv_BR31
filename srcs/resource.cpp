@@ -1,10 +1,9 @@
 #include "resource.hpp"
 
-Resource::Resource(int fd, std::string& raw_data, Client *client, e_direction direction, e_nextcall next_call) : raw_data(raw_data), client(client), direction(direction), next_call(next_call)
+Resource::Resource(int fd, std::string& raw_data, Client *client, e_direction direction, e_nextcall next_call, int response_error_num) : raw_data(raw_data), client(client), direction(direction), next_call(next_call), response_error_num(response_error_num)
 {
 	this->fd = fd;
 	this->pid = -1;
-	this->response_error_num = -1;
 }
 
 Resource::~Resource()
