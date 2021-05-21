@@ -58,7 +58,7 @@ class Config
 		virtual ~Config();
 		static Config* getInstance();
 		static const int decodeMimeBase64[256];
-	
+
 		//method
 		bool	makeConfig(const char *path);
 
@@ -167,7 +167,7 @@ class Server	:	public Fdmanager
 		unsigned short	   getPort() const;
 
 		//코딩해야함
-		
+
 		std::map<std::string, Location> &getLocations();
 		//for test//
 		void	show();
@@ -207,7 +207,7 @@ class Request
 {
 	private:
 		std::string	raw_request;
-		
+
 		std::string	method;
 		std::string	uri;
 		std::string	http_version;
@@ -272,18 +272,18 @@ class Response
 	public :
 		Response(void);
 		virtual ~Response(void);
-		
+
 		//getter
 		bool		getIsDisconnectImmediately();
 		std::string&	getRawResponse(void);
-		
+
 		//setter
 		void	setLocation(Location *location);
 		void	setClient(Client *client);
 		void	setResourcePath(const std::string &resource_path);
 		void	setCgiExtention(const std::string &cgi_extention);
 		void	setIsRedirection(bool is_redirection);
-		
+
 		//response_common
 		void	initResponse(void);
 		void	makeResponse();
@@ -319,7 +319,9 @@ class Response
 		// int		makePutResponse();
 		// int		makeDirectoryToCreate();
 		// int		createPutRequest();
-		
+		void		makePutResponse();
+		int			mkdirResourcePath();
+
 		// char	**makeEnv();
 };
 
@@ -361,7 +363,7 @@ class Client	:	public Fdmanager
 };
 
 ////////////////// Nginx ////////////////
-class Nginx 
+class Nginx
 {
 	private :
 		fd_set	reads;
@@ -378,7 +380,7 @@ class Nginx
 
 		// public method
 		bool	initServers(); // Config 에 적혀있는 정보를 기반으로 Server 인스턴스를 직접 만들어 내서 자신의 fds 에 집어넣는다.
-		bool	run(); 
+		bool	run();
 		void	deleteFromFdPool(Fdmanager * fdmanager);
 		void 	insertToFdpool(Fdmanager *fdmanager);
 	private :
@@ -391,7 +393,7 @@ class Nginx
 		void	doReadResourceFD(int i);
 		void	doWriteClientFD(int i);
 		void	doWriteResourceFD(int i);
-		
+
 };
 
 #endif
