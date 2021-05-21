@@ -12,13 +12,16 @@ Resource::~Resource()
 
 }
 
-///////////////////////// method ///////////////////////// 
+///////////////////////// method /////////////////////////
 e_resource_is_ready_status Resource::isReady()
 {
 	int 	status;
 
 	if (pid == -1) // 자식이 없다.
+	{
+		std::cout << "here" << std::endl;
 		return (READY);
+	}
 	else
 	{
 		//기다리는 PID가 종료되지 않아서 즉시 종료 상태를 회수 할 수 없는 상황에서 호출자는 차단되지 않고 반환값으로 0을 받음
@@ -45,7 +48,7 @@ void		Resource::doNext()
 		this->client->setStatus(FILE_WRITE_DONE);
 
 	if (this->next_call == MAKE_RESPONSE)
-		client->getResponse().makeResponse();	
+		client->getResponse().makeResponse();
 	else
 	{
 		this->client->setStatus(RESPONSE_MAKE_DONE);

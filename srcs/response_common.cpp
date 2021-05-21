@@ -19,12 +19,12 @@ void	Response::makeResponse()
 
 	if (this->client->getRequest().getMethod() == "GET")
 		makeGetResponse();
-	// else if (this->client->getRequest().getMethod() == "PUT")
-	// 	makePutResponse();
+	else if (this->client->getRequest().getMethod() == "PUT")
+		makePutResponse();
 }
 
 
-void	Response::makeErrorResponse(int error) 
+void	Response::makeErrorResponse(int error)
 {
 	this->raw_response.clear();
 
@@ -86,8 +86,8 @@ void	Response::setResource(int fd, e_direction direction, e_nextcall nextcall, i
 	if (direction == RAW_DATA_TO_FD) // request 의 raw_body 에서 fd 로 써야한다
 	{
 		res = new Resource(
-										fd, 
-										this->client->getRequest().getRawBody(), 
+										fd,
+										this->client->getRequest().getRawBody(),
 										this->client,
 										RAW_DATA_TO_FD,
 										nextcall,
@@ -97,17 +97,17 @@ void	Response::setResource(int fd, e_direction direction, e_nextcall nextcall, i
 	else		// fd 에서 response 의 raw_response 로 써야한다. FD_TO_RAW_DATA
 	{
 		res = new Resource(
-										fd, 
-										this->raw_response, 
+										fd,
+										this->raw_response,
 										this->client,
 										FD_TO_RAW_DATA,
 										nextcall,
 										error_num
-									);			
+									);
 	}
 	this->client->setPulishedResource(res);
 	Config::getInstance()->getNginx()->insertToFdpool(res);
-	
+
 }
 
 /////////////// header make 관련 /////////////////

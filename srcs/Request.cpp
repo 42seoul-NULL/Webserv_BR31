@@ -25,15 +25,14 @@ e_request_try_make_request_return	Request::tryMakeRequest(void)
 	std::size_t	found = this->raw_request.find("\r\n\r\n");
 	int	res = 1;
 
-	if (found != std::string::npos && this->body_receving == 0)
+	if (found != std::string::npos && this->body_receving == false) //header receive done!
 	{
 		this->makeStartLine();
 		this->makeRequestHeader();
 		this->body_receving = true;
 		res = bodyCheck();
-		if (res == 0)
+		if (res == false)
 		{
-			this->raw_request = this->temp_body;
 			this->temp_body.clear();
 			return (requestValidCheck(true));
 		}
@@ -41,6 +40,7 @@ e_request_try_make_request_return	Request::tryMakeRequest(void)
 	if (this->body_receving == true)
 	{
 		this->temp_body += raw_request;
+		raw_request.clear();
 		return (requestValidCheck(isComplete()));
 	}
 	return (requestValidCheck(false));
@@ -152,7 +152,7 @@ e_request_try_make_request_return	Request::requestValidCheck(bool isComplete)
 		//set response resource_path
 		std::string resource_path = loc.getRoot() + this->uri.substr(loc.getUriKey().size());
 		this->client->getResponse().setResourcePath(resource_path);
-		
+
 		//set response cgi_extention
 		for (std::map<std::string, std::string>::iterator iter = loc.getCgiInfos().begin(); iter != loc.getCgiInfos().end(); iter++)
 		{
@@ -209,8 +209,8 @@ void	Request::parseHttpVersion(void)
 
 void	Request::makeRequestHeader(void)
 {
-	std::string raw_header = this->raw_request.substr(this->raw_request.find("\r\n") + 1, this->raw_request.find("\r\n\r\n"));
-	
+	std::string raw_header = this->raw_request.substr(this->raw_request.find("\r\n") + 2, this->raw_request.find("\r\n\r\n") - this->raw_request.find("\r\n") - 1);
+
 	std::vector<std::string> split_vec;
 
 	ft_split(raw_header, "\r\n", split_vec);
@@ -232,8 +232,8 @@ void	Request::makeRequestHeader(void)
 	// for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
 	// 	std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
 
-	this->temp_body = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
-	this->raw_request.clear();
+	this->raw_request = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
+	//this->raw_request.clear();
 }
 
 bool	Request::bodyCheck(void)
@@ -276,14 +276,20 @@ bool	Request::isComplete(void)
 				this->temp_body.clear();
 				return (true);
 			}
-			this->temp_body = this->temp_body.substr(found + 2);
-			if (this->temp_body.length() >= chunk_size)
+			std::string str = this->temp_body.substr(found + 2);
+			//this->temp_body = this->temp_body.substr(found + 2);
+
+			if (str.length() >= chunk_size)
 			{
+				//found = str.find("\r\n");
+				this->raw_body = this->raw_body + str.substr(0, chunk_size);
+				temp_body = "";
+				if (temp_body.length() > chunk_size)
+					this->temp_body = str.substr(chunk_size + 2);
 				found = this->temp_body.find("\r\n");
-				this->raw_body += this->temp_body.substr(0, found);
-				this->temp_body = this->temp_body.substr(found + 2);
 			}
-			found = this->temp_body.find("\r\n");
+			else
+				break ;
 		}
 	}
 	return (false);
@@ -295,7 +301,7 @@ bool	Request::isValidAuthHeader(Location &loc)
 	{
 		char result[200];
 		ft_memset(result, 0, 200);
-				
+
 		if (this->headers.find(AUTHORIZATION) == this->headers.end())  // auth key 헤더가 아예 안들어왔다.
 		{		
 			return (false);
@@ -326,8 +332,6 @@ bool	Request::isValidMethod(Location &loc)
 		}
 	}
 	if (isAllowCheckOkay != true) // allow method check 가 안되었다. -> 405
-	{
 		return (false);
-	}
 	return (true);
 }
