@@ -1,46 +1,67 @@
-SRCNAME	=		\
-					main.cpp\
-					parser.cpp\
-					Request.cpp\
-					Response.cpp\
-					nginx.cpp
+NAME = webserv
 
-SRCDIR		=		./srcs/
+SRCNAME	=	client.cpp\
+			config.cpp\
+			fdmanager.cpp\
+			main.cpp\
+			nginx.cpp\
+			request.cpp\
+			resource.cpp\
+			response_common.cpp\
+			response_get.cpp\
+			response_put.cpp\
+			response_redirection.cpp\
+			response_cgi.cpp\
+			response.cpp\
+			server.cpp\
 
-SRCS		=		${addprefix ${SRCDIR}, ${SRCNAME}}
+SRCDIR = ./srcs/
+SRCS = $(addprefix $(SRCDIR), $(SRCNAME))
 
-INCDIR		=		./includes/
+INC_DIR = ./includes/
+INCLUDE = -I$(INC_DIR) -I$(LIB_DIR)
 
-NAME		=		webserv
+LIB_DIR = ./libft_cpp/
+LIB_NAME = libft.a
 
-LIB_NAME	=		libft.a
+CC = clang++
+CFLAGS = -Wall -Wextra -Werror -std=c++98
+DCFLAGS = -g $(SRCS)
 
-CC			=		clang++
+all : $(NAME)
 
-CF			=		-Wall -Wextra -Werror -std=c++98 -I ${INCDIR} ${SRCS}
-DCF			=		-g ${SRCS}
+clean :
+	make -C $(LIB_DIR) clean
 
-${NAME}     :
-					make all -C "./libft_cpp"
-					cp libft_cpp/${LIB_NAME} ${LIB_NAME}
-					${CC} ${CF} ${LIB_NAME} -o ${NAME} 
+fclean : clean
+	make -C $(LIB_DIR) fclean
+	rm -rf webserv.dSYM
+	rm -rf $(NAME) testlog
 
-dbg		:
-					${CC} ${DCF} ${LIB_NAME} -o ${NAME}
-					lldb webserv -- configs/test.conf
+re : fclean all
 
-test		:
-					${CC} ${DCF} ${LIB_NAME} -o ${NAME}
-					./webserv configs/test.conf
+dbg : $(SRCS)
+	$(CC) $(DCFLAGS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)
+	lldb webserv -- tests/test1_tester/test1_tester.config
 
-fclean		:
-					make fclean -C "./libft_cpp"
-					rm -rf webserv.dSYM
-					rm -rf ${NAME}
-					rm -rf ${LIB_NAME}
+$(NAME) : $(LIB_DIR)$(LIB_NAME) $(SRCS)
+	$(CC) $(CFLAGS) $(SRCS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)
 
-re			:		fclean all
+$(LIB_DIR)$(LIB_NAME) :
+	make -C $(LIB_DIR) all
 
-all         :      	${NAME}
+###### 여기부터 테스터 관련 설정 ####
+TESTS_DIR = ./tests/
+TEST1 = test1_tester
+TEST1_PORT = 8080
 
-.PHONY		:		fclean re all test ${NAME}
+run : all
+	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config
+test1 : all
+	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config > testlog &
+	-./tests/tester_bin/tester http://localhost:$(TEST1_PORT)
+	killall $(NAME)
+
+##############################
+
+.PHONY : all clean fclean re dbg test1
