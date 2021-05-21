@@ -8,7 +8,6 @@ char	**Response::makeCgiEnv()
 	size_t								idx;
 	std::map<std::string, std::string>	&headers = this->client->getRequest().getHeaders();
 	
-	// request_uri : ~~~/asnioefni.bla/asdf/efef/?asneiofnaiosenfioasdfm
 	std::string request_uri = this->client->getRequest().getUri();
 	std::string path_info = request_uri.substr(request_uri.find(this->cgi_extention) + (this->cgi_extention.size()));
 	std::string query_string;
@@ -128,7 +127,6 @@ void	Response::makeCgiResponse()
 	{
 		close(client->getFdRead());
 		close(client->getFdWrite());
-
 		try
 		{
 			std::string first_line;

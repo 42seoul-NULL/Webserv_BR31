@@ -173,6 +173,10 @@ e_request_try_make_request_return	Request::requestValidCheck(bool isComplete)
 
 void	Request::makeStartLine(void)
 {
+	std::cout << "******************************************************" << std::endl;
+	std::cout << this->raw_request << std::endl;
+	std::cout << "******************************************************" << std::endl;
+
 	this->parseMethod();
 	this->parseUri();
 	this->parseHttpVersion();
@@ -181,6 +185,10 @@ void	Request::makeStartLine(void)
 		this->raw_request = this->raw_request.substr(n + 2);
 	else
 		this->raw_request = "";
+
+	std::cout << "******************************************************" << std::endl;
+	std::cout << this->method << std::endl;
+	std::cout << "******************************************************" << std::endl;
 }
 
 void	Request::parseMethod(void)
@@ -209,7 +217,7 @@ void	Request::parseHttpVersion(void)
 
 void	Request::makeRequestHeader(void)
 {
-	std::string raw_header = this->raw_request.substr(this->raw_request.find("\r\n") + 2, this->raw_request.find("\r\n\r\n") - this->raw_request.find("\r\n") - 1);
+	std::string raw_header = this->raw_request.substr( 0, this->raw_request.find("\r\n\r\n") );
 
 	std::vector<std::string> split_vec;
 
@@ -272,7 +280,8 @@ bool	Request::isComplete(void)
 			chunk_size = ft_atoi_hex(this->temp_body.substr(0, found));
 			if (chunk_size == 0)
 			{
-				this->raw_request += this->temp_body.substr(found + 2);
+				if (temp_body.length() > found + 3)
+				this->raw_request += this->temp_body.substr(found + 4);
 				this->temp_body.clear();
 				return (true);
 			}
@@ -284,7 +293,7 @@ bool	Request::isComplete(void)
 				//found = str.find("\r\n");
 				this->raw_body = this->raw_body + str.substr(0, chunk_size);
 				temp_body = "";
-				if (temp_body.length() > chunk_size)
+				if (temp_body.length() > chunk_size + 1)
 					this->temp_body = str.substr(chunk_size + 2);
 				found = this->temp_body.find("\r\n");
 			}

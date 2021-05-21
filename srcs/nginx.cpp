@@ -228,7 +228,7 @@ void	Nginx::doReadServerFd(int i)
 
 void	Nginx::doReadClientFD(int i)
 {
-	std::cout << "\033[34m client socket read called \033[0m" << std::endl;
+	//std::cout << "\033[34m client socket read called \033[0m" << std::endl;
 
 	Client *client = dynamic_cast<Client *>(this->fd_pool[i]);
 	int		len;
@@ -245,8 +245,8 @@ void	Nginx::doReadClientFD(int i)
 	{
 		buf[len] = 0;
 		client->getRequest().getRawRequest() += buf; // 무조건 더한다. (다음 리퀘스트가 미리 와있을 수 있다.)
-		std::cout << buf;
-		///////////////////////////////
+		std::cout << buf; ///////////////////////////////
+		
 		//추후에 추가되어야 할 부분입니다. (makeResponse 와 tryMakeRequest 가 대폭 수정 될 예정)
 	 	if ((client->getStatus() == REQUEST_RECEIVING) && (client->getRequest().tryMakeRequest() == READY_TO_MAKE_RESPONSE))
 		{
