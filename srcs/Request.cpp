@@ -1,50 +1,61 @@
-#include "../includes/Request.hpp"
+#include "webserv.hpp"
 
-Request::Request(void) : status(0), type(0)
+
+Request::Request(void)
 {
 	this->raw_request.clear();
 	initRequest();
 }
 
-Request::Request(const Request& src) : raw_request(src.raw_request), method(src.method), uri(src.uri), http_version(src.http_version), accept_language(src.accept_language), authorization(src.authorization), content_length(src.content_length), content_type(src.content_type), date(src.date), host(src.host), referer(src.referer), transfer_encoding(src.transfer_encoding), user_agent(src.user_agent), status(src.status), type(src.type)
+///////////////// public func ///////////////////////
+void	Request::initRequest(void)
 {
-
+	this->method.clear();
+	this->uri.clear();
+	this->http_version.clear();
+	this->headers.clear();
+	this->raw_body.clear();
+	this->temp_body.clear();
+	body_receving = false;
+	body_length_info_type = NOTHING;
 }
 
-Request&	Request::operator=(const Request& src)
+e_request_try_make_request_return	Request::tryMakeRequest(void)
 {
-	this->raw_request = src.raw_request;
-	this->method = src.method;
-	this->uri = src.uri;
-	this->http_version = src.http_version;
-	this->accept_charsets = src.accept_charsets;
-	this->accept_language = src.accept_language;
-	this->authorization = src.authorization;
-	this->content_length = src.content_length;
-	this->content_type = src.content_type;
-	this->date = src.date;
-	this->host = src.host;
-	this->referer = src.referer;
-	this->transfer_encoding = src.transfer_encoding;
-	this->user_agent = src.user_agent;
-	this->status = 0;
-	this->type = 0;
-	return (*this);
+	std::size_t	found = this->raw_request.find("\r\n\r\n");
+	int	res = 1;
+
+	if (found != std::string::npos && this->body_receving == 0)
+	{
+		this->makeStartLine();
+		this->makeRequestHeader();
+		this->body_receving = true;
+		res = bodyCheck();
+		if (res == 0)
+		{
+			this->raw_request = this->temp_body;
+			this->temp_body.clear();
+			return (requestValidCheck(true));
+		}
+	}
+	if (this->body_receving == true)
+	{
+		this->temp_body += raw_request;
+		return (requestValidCheck(isComplete()));
+	}
+	return (requestValidCheck(false));
 }
 
+///////// setter ////////////
+void			Request::setClient(Client *client)
+{
+	this->client = client;
+}
+
+///////// getter ////////////
 std::string&	Request::getRawRequest(void)
 {
 	return (this->raw_request);
-}
-
-std::string&	Request::getRawBody(void)
-{
-	return (this->raw_body);
-}
-
-std::string&	Request::getRawBody(void) const
-{
-	return (const_cast<std::string &>(this->raw_body));
 }
 
 const std::string&	Request::getMethod(void) const
@@ -62,165 +73,102 @@ const std::string&	Request::getHttpVersion(void) const
 	return (this->http_version);
 }
 
-const std::string&	Request::getAcceptCharsets(void) const
+std::map<std::string, std::string>&	Request::getHeaders(void) const
 {
-	return (this->accept_charsets);
+	return (const_cast<std::map<std::string, std::string>& > (this->headers));
 }
 
-const std::string&	Request::getAcceptLanguage(void) const
+std::string&	Request::getRawBody(void) const
 {
-	return (this->accept_language);
+	return (const_cast<std::string &>(this->raw_body));
 }
 
-const std::string&	Request::getAuthorization(void) const  // base64 로 복호화 한 후에    id:pass 로 함
+///////////////// private func ///////////////////////
+int		 	Request::base64_decode(const char * text, char * dst, int numBytes)
 {
-	return (this->authorization);
+    const char* cp;
+    int space_idx = 0, phase;
+    int d, prev_d = 0;
+    char c;
+    space_idx = 0;
+    phase = 0;
+    for (cp = text; *cp != '\0'; ++cp) {
+        d = Config::decodeMimeBase64[(int)*cp];
+        if (d != -1) {
+            switch (phase) {
+            case 0:
+                ++phase;
+                break;
+            case 1:
+                c = ((prev_d << 2) | ((d & 0x30) >> 4));
+                if (space_idx < numBytes)
+                    dst[space_idx++] = c;
+                ++phase;
+                break;
+            case 2:
+                c = (((prev_d & 0xf) << 4) | ((d & 0x3c) >> 2));
+                if (space_idx < numBytes)
+                    dst[space_idx++] = c;
+                ++phase;
+                break;
+            case 3:
+                c = (((prev_d & 0x03) << 6) | d);
+                if (space_idx < numBytes)
+                    dst[space_idx++] = c;
+                phase = 0;
+                break;
+            }
+            prev_d = d;
+        }
+    }
+    return space_idx;
 }
 
-const std::string&	Request::getContentLength(void) const
+e_request_try_make_request_return	Request::requestValidCheck(bool isComplete)
 {
-	return (this->content_length);
-}
-
-const std::string&	Request::getContentType(void) const
-{
-	return (this->content_type);
-}
-
-const std::string&	Request::getDate(void) const
-{
-	return (this->date);
-}
-
-const std::string&	Request::getHost(void) const
-{
-	return (this->host);
-}
-
-const std::string&	Request::getReferer(void) const
-{
-	return (this->referer);
-}
-
-const std::string&	Request::getTransferEncoding(void) const
-{
-	return (this->transfer_encoding);
-}
-
-const std::string&	Request::getUserAgent(void) const
-{
-	return (this->user_agent);
-}
-
-void 	Request::setUri(const std::string &uri)
-{
-	this->uri = uri;
-}
-
-void	Request::setRawRequest(const std::string& raw_request)
-{
-	this->raw_request = raw_request;
-}
-
-void	Request::setAcceptCharsets(const std::string& accept_charsets)
-{
-	this->accept_charsets = accept_charsets;
-}
-
-void	Request::setAcceptLanguage(const std::string& accept_language)
-{
-	this->accept_language = accept_language;
-}
-
-void	Request::setAuthorization(const std::string& authorization)
-{
-	this->authorization = authorization;
-}
-
-void	Request::setContentLength(const std::string& content_length)
-{
-	this->content_length = content_length;
-}
-
-void	Request::setContentType(const std::string& content_type)
-{
-	this->content_type = content_type;
-}
-
-void	Request::setDate(const std::string& date)
-{
-	this->date = date;
-}
-
-void	Request::setHost(const std::string& host)
-{
-	this->host = host;
-}
-
-void	Request::setReferer(const std::string& referer)
-{
-	this->referer = referer;
-}
-
-void	Request::setTransferEncoding(const std::string& transfer_encoding)
-{
-	this->transfer_encoding = transfer_encoding;
-}
-
-void	Request::setUserAgent(const std::string& user_agent)
-{
-	this->user_agent = user_agent;
-}
-
-void	Request::initRequest(void)
-{
-	this->method.clear();
-	this->uri.clear();
-	this->http_version.clear();
-
-	this->accept_charsets.clear();
-	this->accept_language.clear();
-	this->authorization.clear();
-	this->content_length.clear();
-	this->content_type.clear();
-	this->date.clear();
-	this->host.clear();
-	this->referer.clear();
-	this->transfer_encoding.clear();
-	this->user_agent.clear();
-
-	this->raw_header.clear();
-	this->raw_body.clear();
-	this->temp_body.clear();
-
-	status = 0;
-	type = 0;
-}
-
-bool	Request::tryMakeRequest(void)
-{
-	std::size_t	found = this->raw_request.find("\r\n\r\n");
-	int	res = 1;
-
-	if (found != std::string::npos && this->status == 0)
+	if (isComplete == false)
+		return (WAITING_REQUEST_MSG);
+	else
 	{
-		this->makeStartLine();
-		this->makeRequestHeader();
-		this->status = 1;
-		res = bodyCheck();
-		if (res == 0)
+		Location &loc = this->client->getServer()->getPerfectLocation(this->uri);
+		//set response location
+		this->client->getResponse().setLocation(&loc);
+
+		//auth check
+		if (isValidAuthHeader(loc) == false)
 		{
-			this->raw_request = this->temp_body;
-			this->temp_body.clear();
-			return (true);
+			this->client->setStatus(RESPONSE_MAKING);
+			this->client->getResponse().makeErrorResponse(401);
+			return (I_MAKE_ERROR_RESPONSE);
 		}
+		//allow_method check
+		if (isValidMethod(loc) == false)
+		{
+			this->client->setStatus(RESPONSE_MAKING);
+			this->client->getResponse().makeErrorResponse(405);
+			return (I_MAKE_ERROR_RESPONSE);
+		}
+
+		//set response resource_path
+		std::string resource_path = loc.getRoot() + this->uri.substr(loc.getUriKey().size());
+		this->client->getResponse().setResourcePath(resource_path);
+		
+		//set response cgi_extention
+		for (std::map<std::string, std::string>::iterator iter = loc.getCgiInfos().begin(); iter != loc.getCgiInfos().end(); iter++)
+		{
+			if (resource_path.find(iter->first) != std::string::npos) // cgi_extention 표현을 찾았다면
+			{
+				this->client->getResponse().setCgiExtention(iter->first);
+				break ;
+			}
+		}
+
+		//set is_redirection
+		if (loc.getRedirectReturn() != -1)
+			this->client->getResponse().setIsRedirection(true);
+
+		return (READY_TO_MAKE_RESPONSE);
 	}
-	if (this->status == 1)
-	{
-		this->makeRequestBody();
-		return (isComplete());
-	}
-	return (false);
 }
 
 void	Request::makeStartLine(void)
@@ -228,30 +176,11 @@ void	Request::makeStartLine(void)
 	this->parseMethod();
 	this->parseUri();
 	this->parseHttpVersion();
-}
-
-void	Request::makeRequestHeader(void)
-{
-	this->raw_header = this->raw_request.substr(this->raw_request.find("\r\n") + 1, this->raw_request.find("\r\n\r\n"));
-
-	this->parseAcceptCharsets();
-	this->parseAcceptLanguage();
-	this->parseAuthorization();
-	this->parseContentLength();
-	this->parseContentType();
-	this->parseDate();
-	this->parseHost();
-	this->parseReferer();
-	this->parseTransferEncoding();
-	this->parseUserAgent();
-
-	this->temp_body = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
-	this->raw_request.clear();
-}
-
-void	Request::makeRequestBody(void)
-{
-	this->temp_body += raw_request;
+	std::size_t n = this->raw_request.find("\r\n");
+	if (this->raw_request.length() >= (n + 2))
+		this->raw_request = this->raw_request.substr(n + 2);
+	else
+		this->raw_request = "";
 }
 
 void	Request::parseMethod(void)
@@ -278,155 +207,62 @@ void	Request::parseHttpVersion(void)
 	this->http_version = start_line.substr(start_line.find_last_of(' ') + 1);
 }
 
-void	Request::parseAcceptCharsets(void)
+void	Request::makeRequestHeader(void)
 {
-	std::string	key = "Accept-Charset: ";
-	std::size_t	found = this->raw_header.find(key);
+	std::string raw_header = this->raw_request.substr(this->raw_request.find("\r\n") + 1, this->raw_request.find("\r\n\r\n"));
+	
+	std::vector<std::string> split_vec;
 
-	if (found != std::string::npos)
+	ft_split(raw_header, "\r\n", split_vec);
+	std::vector<std::string>::iterator i;
+	for (i = split_vec.begin(); i != split_vec.end(); i++)
 	{
-		std::size_t	target_pos = found + key.length();
-
-		this->accept_charsets = this->raw_header.substr(target_pos, this->raw_header.find("\r\n", target_pos) - target_pos);
+		std::string temp = *i;
+		std::size_t found = temp.find(":");
+		std::string key = temp.substr(0, found);
+		while (temp[found + 1] == 32)
+			found++;
+		std::string value = "";
+		if (temp.length() != (found + 1))
+			value = temp.substr(found + 1);
+		headers[key] = value;
 	}
-}
 
-void	Request::parseAcceptLanguage(void)
-{
-	std::string key = "Accept-Language: ";
-	std::size_t found = this->raw_header.find(key);
+	// 맵 출력용
+	// for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
+	// 	std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
 
-	if (found != std::string::npos)
-	{
-		std::size_t target_pos = found + key.length();
-
-		this->accept_language = this->raw_header.substr(target_pos, this->raw_header.find("\r\n", target_pos) - target_pos);
-	}
-}
-
-void	Request::parseAuthorization(void)
-{
-	std::string key = "Authorization: ";
-	std::size_t found = this->raw_header.find(key);
-
-	if (found != std::string::npos)
-	{
-		std::size_t target_pos = found + key.length();
-
-		this->authorization = this->raw_header.substr(target_pos, this->raw_header.find("\r\n", target_pos) - target_pos);
-	}
-}
-
-void	Request::parseContentLength(void)
-{
-	std::string key = "Content-Length: ";
-	std::size_t found = this->raw_header.find(key);
-
-	if (found != std::string::npos)
-	{
-		std::size_t target_pos = found + key.length();
-
-		this->content_length = this->raw_header.substr(target_pos, this->raw_header.find("\r\n", target_pos) - target_pos);
-	}
-}
-
-void	Request::parseContentType(void)
-{
-	std::string key = "Content-Type: ";
-	std::size_t found = this->raw_header.find(key);
-
-	if (found != std::string::npos)
-	{
-		std::size_t target_pos = found + key.length();
-
-		this->content_type = this->raw_header.substr(target_pos, this->raw_header.find("\r\n", target_pos) - target_pos);
-	}
-}
-
-void	Request::parseDate(void)
-{
-	std::string key = "Date: ";
-	std::size_t found = this->raw_header.find(key);
-
-	if (found != std::string::npos)
-	{
-		std::size_t target_pos = found + key.length();
-
-		this->date = this->raw_header.substr(target_pos, this->raw_header.find("\r\n", target_pos) - target_pos);
-	}
-}
-
-void	Request::parseHost(void)
-{
-	std::string key = "Host: ";
-	std::size_t found = this->raw_header.find(key);
-
-	if (found != std::string::npos)
-	{
-		std::size_t target_pos = found + key.length();
-
-		this->host = this->raw_header.substr(target_pos, this->raw_header.find("\r\n", target_pos) - target_pos);
-	}
-}
-
-void	Request::parseReferer(void)
-{
-	std::string key = "Referer: ";
-	std::size_t found = this->raw_header.find(key);
-
-	if (found != std::string::npos)
-	{
-		std::size_t target_pos = found + key.length();
-
-		this->referer = this->raw_header.substr(target_pos, this->raw_header.find("\r\n", target_pos) - target_pos);
-	}
-}
-
-void	Request::parseTransferEncoding(void)
-{
-	std::string key = "Transfer-Encoding: ";
-	std::size_t found = this->raw_header.find(key);
-
-	if (found != std::string::npos)
-	{
-		std::size_t target_pos = found + key.length();
-
-		this->transfer_encoding = this->raw_header.substr(target_pos, this->raw_header.find("\r\n", target_pos) - target_pos);
-	}
-}
-
-void	Request::parseUserAgent(void)
-{
-	std::string key = "User-Agent: ";
-	std::size_t found = this->raw_header.find(key);
-
-	if (found != std::string::npos)
-	{
-		std::size_t target_pos = found + key.length();
-
-		this->user_agent = this->raw_header.substr(target_pos, this->raw_header.find("\r\n", target_pos) - target_pos);
-	}
+	this->temp_body = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
+	this->raw_request.clear();
 }
 
 bool	Request::bodyCheck(void)
 {
-	if (this->transfer_encoding == "chunked")
-		this->type = 2;
-	else if (this->content_length != "")
-		this->type = 1;
-	return (this->type);
+	if (this->headers["Transfer-Encoding"] == "chunked")
+	{
+		this->body_length_info_type = CHUNKED;
+		return (true);
+	}
+	else if (this->headers["Content-Length"] != "")
+	{
+		this->body_length_info_type = CONTENT_LENGTH;
+		return (true);
+	}
+	return (false);
 }
 
 bool	Request::isComplete(void)
 {
-	if (this->type == 1 && this->temp_body.length() >= (std::size_t)ft_atoi(this->content_length))
+	std::size_t len = ft_atoi(this->headers["Content-Length"]);
+
+	if (this->body_length_info_type == CONTENT_LENGTH && this->temp_body.length() >= len)
 	{
-		this->raw_body += this->temp_body.substr(0, ft_atoi(this->content_length));
-		this->raw_request += this->temp_body.substr((std::size_t)ft_atoi(this->content_length) ); // 다음 리퀘스트가 한 번에 붙어서 오면 어떻게 처리해야하는가?
+		this->raw_body += this->temp_body.substr(0, len);
+		this->raw_request += this->temp_body.substr(len); // 다음 리퀘스트가 한 번에 붙어서 오면 어떻게 처리해야하는가?
 		temp_body.clear();
 		return (true);
 	}
-	else if (this->type == 2)
+	else if (this->body_length_info_type == CHUNKED)
 	{
 		std::size_t found = this->temp_body.find("\r\n");
 		std::size_t	chunk_size;
@@ -453,30 +289,48 @@ bool	Request::isComplete(void)
 	return (false);
 }
 
-std::string	Request::createRawRequest(void) const
+bool	Request::isValidAuthHeader(Location &loc)
 {
-	std::string	header = std::string("");
-
-	header += "Method: " + this->method + "\r\n";
-	header += "URI: " + this->uri + "\r\n";
-	header += "HTTP-Version: " + this->http_version + "\r\n";
-	header += "Accept-Charset: " + this->accept_charsets + "\r\n";
-	header += "Accept-Language: " + this->accept_language + "\r\n";
-	header += "Authorization: " + this->authorization + "\r\n";
-	header += "Content-Length: " + this->content_length + "\r\n";
-	header += "Content-Type: " + this->content_type + "\r\n";
-	header += "Date: " + this->date + "\r\n";
-	header += "Host: " + this->host + "\r\n";
-	header += "Referer: " + this->referer + "\r\n";
-	header += "Transfer-Encoding: " + this->transfer_encoding + "\r\n";
-	header += "User-Agent: " + this->user_agent + "\r\n";
-	header += "\r\n";
-
-	return (header);
+	if (loc.getAuthKey() != "")
+	{
+		char result[200];
+		ft_memset(result, 0, 200);
+				
+		if (this->headers.find(AUTHORIZATION) == this->headers.end())  // auth key 헤더가 아예 안들어왔다.
+		{		
+			this->client->getResponse().makeErrorResponse(401);
+			return (false);
+		}
+		else
+		{
+			size_t idx = this->headers[AUTHORIZATION].find_first_of(' ');
+			std::string secret = this->headers[AUTHORIZATION].substr(idx + 1);
+			base64_decode(secret.c_str(), result, secret.size());
+			if (std::string(result) != loc.getAuthKey()) // 키가 맞지 않는다.
+			{
+				this->client->getResponse().makeErrorResponse(401);
+				return (false);
+			}
+		}
+	}
+	return (true);
 }
 
-void	Request::bodyPrint(void)
+bool	Request::isValidMethod(Location &loc)
 {
-	std::cout << this->raw_body << std::endl;
+	bool isAllowCheckOkay = false;
+	for (std::list<std::string>::iterator iter = loc.getAllowMethods().begin(); iter != loc.getAllowMethods().end(); iter++)
+	{
+		if (this->method == *iter)
+		{
+			isAllowCheckOkay = true;
+			break ;
+		}
+	}
+	if (isAllowCheckOkay != true) // allow method check 가 안되었다. -> 405
+	{
+		this->client->getResponse().makeErrorResponse(405);
+		return (false);
+	}
+	return (true);
 }
-

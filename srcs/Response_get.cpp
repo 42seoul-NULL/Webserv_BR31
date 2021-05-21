@@ -1,81 +1,117 @@
-#include "parser.hpp"
-#include "Response.hpp"
-#include "nginx.hpp"
+#include "webserv.hpp"
 
-int		Response::makeGetBody(const Request& request, Location &location, int client_socket)
+void		Response::makeGetResponse()
 {
-	//여기서 만들기 직전에 makeContentType 호출
-	int fd;
-	struct stat	sb;
-	size_t idx;
+    //REQUEST_RECEIVING,
+	//RESPONSE_MAKING,
+	//FILE_READING,
+	//FILE_READ_DONE,
+	//FILE_WRITING,
+	//FILE_WRITE_DONE,
+	//RESPONSE_MAKE_DONE
 
-	std::string absol_path = getAbsolutePath(request, location);
+    switch (this->client->getStatus())
+    {
+    case RESPONSE_MAKING:
+    {
+        //기본적인 헤더부터 공사해준다.
+        addFirstLine(200);
+        addDate();
+        addContentLanguage();
 
-	std::cout << request.getUri() << std::endl;
-	std::cout << location.getUriKey() << std::endl;
-	std::cout << absol_path << std::endl;
+        //여기서 만들기 직전에 addContentType 호출
+        int fd;
+        struct stat	sb;
+        size_t idx;
 
-	if (isDirectory(absol_path))
+        if (isDirectory(this->resource_path))
+        {
+            if (*(--this->resource_path.end()) != '/')
+                this->resource_path += '/';
+
+            bool is_exist = false;
+            std::string temp_path;
+            for (std::list<std::string>::iterator iter = this->location->getIndex().begin(); iter != this->location->getIndex().end(); iter++)
+            {
+                temp_path = (this->resource_path + (*iter));
+                is_exist = isExist(temp_path);
+                if ( is_exist == true )
+                    break ;
+            }
+            if (is_exist == false && this->location->getAutoIndex())
+                return (makeAutoIndexPage());
+            this->resource_path = temp_path;
+        }
+        if (!isExist(this->resource_path))
+            return (makeErrorResponse(404));
+
+        idx = this->resource_path.find_first_of('/');
+        idx = this->resource_path.find_first_of('.',idx);
+
+        if (idx == std::string::npos) // 확장자가 없다.
+            addContentType(".bin");
+        else
+            addContentType(this->resource_path.substr(idx));
+
+        if ((fd = open(this->resource_path.c_str(), O_RDONLY)) < 0)
+            return (makeErrorResponse(500));
+        if (fstat(fd, &sb) < 0)
+        {
+            close(fd);
+            return (makeErrorResponse(500));
+        }
+        addContentLength((int)sb.st_size);
+        this->raw_response += "\r\n";
+
+        setResource(fd, FD_TO_RAW_DATA, MAKE_RESPONSE);
+        return ;
+        break;
+    }
+    case FILE_READ_DONE:
+    {
+        this->client->setStatus(RESPONSE_MAKE_DONE);
+        break ;
+    }
+    default:
+        break;
+    }
+}
+
+void		Response::makeAutoIndexPage()
+{
+	this->raw_response.clear();
+	std::string body;
+	std::string pre_addr = "http://" + this->client->getRequest().getHeaders()[HOST] + "/";
+
+	body += "<!DOCTYPE html>";
+	body += "<html>";
+	body += "<head>";
+	body += "</head>";
+	body += "<body>";
+	body += "<h1> AutoIndex : "+ this->client->getRequest().getUri() +"</h1>";
+
+	DIR *dir = NULL;
+	struct dirent *file = NULL;
+	if ( (dir = opendir(this->resource_path.c_str())) == NULL )
+		return (makeErrorResponse(500));
+	while ( (file = readdir(dir)) != NULL )
 	{
-		if ( *(--absol_path.end()) != '/')
-			absol_path += '/';
-
-		bool is_exist = false;
-		std::string temp_path;
-		for (std::list<std::string>::iterator iter = location.getIndex().begin(); iter != location.getIndex().end(); iter++)
-		{
-			temp_path = (absol_path + (*iter));
-			if ((is_exist = isExist(temp_path)) == true)
-				break ;
-		}
-		if (is_exist == false && location.getAutoIndex())
-			return (makeAutoIndexPage(request, absol_path));
-		absol_path = temp_path;
+		std::string file_name(file->d_name);
+		if (file_name != "." && file_name != "..")
+			body += "<a href=\"" + pre_addr + file_name + "\">" + file_name + "</a><br>";
 	}
-	if (!isExist(absol_path))
-		return (404);
+	closedir(dir);
 
-	idx = absol_path.find_first_of('/');
-	idx = absol_path.find_first_of('.',idx);
+	body += "";
+	body += "";
+	body += "</body>";
+	body += "</html>";
 
-	if (idx == std::string::npos) // 확장자가 없다.
-		makeContentType(request, "application/octet-stream");
-	else
-		makeContentType(request, Config::getInstance()->getMimeType()[absol_path.substr(idx)]);
-
-	if ((fd = open(absol_path.c_str(), O_RDONLY)) < 0)
-		return (500);
-	if (fstat(fd, &sb) < 0)
-	{
-		close(fd);
-		return (500);
-	}
-	makeContentLength((int)sb.st_size);
-	makeLastModified(request, location);
+	addFirstLine(200);
+	addDate();
+	this->raw_response += "Content-Type: " + Config::getInstance()->getMimeType()[".html"] + "\r\n";
+	this->raw_response += "Content-Length: " + ft_itoa(body.size()) + "\r\n";
 	this->raw_response += "\r\n";
-
-	Resource *resrc = new Resource();
-	resrc->setFd(fd);
-	resrc->setFdReadTo(client_socket);
-	Config::getInstance()->getNginx()->insert_pull(resrc);
-	(dynamic_cast<Client *>(Config::getInstance()->getNginx()->getFds()[client_socket]))->setStatus(BODY_WRITING);
-	return (200);
+	this->raw_response += body;
+    this->client->setStatus(RESPONSE_MAKE_DONE);
 }
-
-int		Response::makeGetResponse(const Request& request, Location& location, int client_socket)
-{
-	//여기까지 왔다면, auth 체크와 allowMethod 체크는 다 되어있다. 그리고 firstLine 은 200으로 작성되어있고, client 의 status 는 RESPONSE_READY 로 되어있다. 필요시 알아서 BODY_WRITING 으로 바꾸어준다.
-	int ret;
-
-	// 기본적인 헤더들 달아줌. (모두 실패하지 않는 것들)
-	makeContentLanguage();
-	makeContentLocation(request, location);
-	makeDate(request);
-	makeRetryAfter();
-	makeServer();
-
-	if ( (ret = makeGetBody(request, location, client_socket)) != 200 )
-		return (makeErrorReponse(request, location, ret, client_socket));
-	return (200);
-}
-
