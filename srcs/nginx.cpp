@@ -308,7 +308,7 @@ void	Nginx::doWriteClientFD(int i)
 		else
 		{
 			write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().size());
-		
+
 			if (client->getResponse().getIsDisconnectImmediately())
 				deleteFromFdPool(client);
 			else
@@ -316,20 +316,23 @@ void	Nginx::doWriteClientFD(int i)
 				client->getRequest().initRequest();
 				client->getResponse().initResponse();
 				client->setStatus(REQUEST_RECEIVING);
-			}	
+			}
 		}
 	}
 }
 
-void	Nginx::doWriteResourceFD(int i)
+void    Nginx::doWriteResourceFD(int i)
 {
-	Resource *res = dynamic_cast<Resource *>(this->fd_pool[i]);
-	int len;
-
-	len = write(res->getFd(), res->getRawData().c_str(), BUFFER_SIZE);
-	if (len < BUFFER_SIZE)
-	{
-		res->doNext();
-		deleteFromFdPool(res);
-	}
+    Resource *res = dynamic_cast<Resource *>(this->fd_pool[i]);
+    if (res->getRawData().size() < BUFFER_SIZE)
+    {
+        write(res->getFd(), res->getRawData().c_str(), res->getRawData().size());
+        res->doNext();
+        deleteFromFdPool(res);
+    }
+    else
+    {
+        write(res->getFd(), res->getRawData().c_str(), BUFFER_SIZE);
+        res->getRawData() = res->getRawData().substr(BUFFER_SIZE);
+    }
 }

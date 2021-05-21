@@ -12,13 +12,16 @@ Resource::~Resource()
 
 }
 
-///////////////////////// method ///////////////////////// 
+///////////////////////// method /////////////////////////
 e_resource_is_ready_status Resource::isReady()
 {
 	int 	status;
 
 	if (pid == -1) // 자식이 없다.
+	{
+		std::cout << "here" << std::endl;
 		return (READY);
+	}
 	else
 	{
 		if (waitpid(pid, &status, WNOHANG) != 0) // 자식이 종료되지 않았다!.
@@ -41,7 +44,7 @@ void		Resource::doNext()
 		this->client->setStatus(FILE_WRITE_DONE);
 
 	if (this->next_call == MAKE_RESPONSE)
-		client->getResponse().makeResponse();	
+		client->getResponse().makeResponse();
 	else
 	{
 		this->client->setStatus(RESPONSE_MAKE_DONE);
