@@ -298,7 +298,6 @@ bool	Request::isValidAuthHeader(Location &loc)
 				
 		if (this->headers.find(AUTHORIZATION) == this->headers.end())  // auth key 헤더가 아예 안들어왔다.
 		{		
-			this->client->getResponse().makeErrorResponse(401);
 			return (false);
 		}
 		else
@@ -308,7 +307,6 @@ bool	Request::isValidAuthHeader(Location &loc)
 			base64_decode(secret.c_str(), result, secret.size());
 			if (std::string(result) != loc.getAuthKey()) // 키가 맞지 않는다.
 			{
-				this->client->getResponse().makeErrorResponse(401);
 				return (false);
 			}
 		}
@@ -329,7 +327,6 @@ bool	Request::isValidMethod(Location &loc)
 	}
 	if (isAllowCheckOkay != true) // allow method check 가 안되었다. -> 405
 	{
-		this->client->getResponse().makeErrorResponse(405);
 		return (false);
 	}
 	return (true);

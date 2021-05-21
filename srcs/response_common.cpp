@@ -11,10 +11,9 @@ void	Response::initResponse(void)
 
 void	Response::makeResponse()
 {
-	//여기까지 왔다는 것은 method allow check 되어있고, authcheck 되어있고,
-    // if (cgi_extention != "")
-	// 	return (makeCgiResponse());
-
+	//	여기까지 왔다는 것은 method allow check 되어있고, authcheck 되어있고,
+    if (cgi_extention != "")
+		return (makeCgiResponse());
 	if (is_redirection)
 		return (makeRedirectionResponse());
 
@@ -106,6 +105,7 @@ void	Response::setResource(int fd, e_direction direction, e_nextcall nextcall, i
 										error_num
 									);			
 	}
+	this->client->setPulishedResource(res);
 	Config::getInstance()->getNginx()->insertToFdpool(res);
 	
 }

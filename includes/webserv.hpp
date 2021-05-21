@@ -178,6 +178,7 @@ class Resource	:	public Fdmanager
 {
 	private :
 		std::string &raw_data;
+		std::string unlink_path;
 		Client		*client;
 		e_direction	direction;
 		e_nextcall	next_call;
@@ -196,8 +197,12 @@ class Resource	:	public Fdmanager
 
 		//setter
 		void		setResponseErrorNum(int response_error_num);
+		void		setPid(int pid);
+		void		setUnlinkPath(const std::string& unlink_path);
 
 		//getter
+		int			getPid();
+		const std::string &getUnlinkPath();
 		std::string &getRawData();
 		Client		*getClient();
 };
@@ -311,6 +316,10 @@ class Response
 		int		addWWWAuthenticate();
 		void	addRawErrorBody(int error);
 
+		//response_cgi
+		void	makeCgiResponse();
+		char	**makeCgiEnv();
+
 		//response_get
 		void	makeGetResponse();
 		void	makeRedirectionResponse();
@@ -319,8 +328,8 @@ class Response
 		// int		makePutResponse();
 		// int		makeDirectoryToCreate();
 		// int		createPutRequest();
-		
-		// char	**makeEnv();
+
+
 };
 
 /////////////////// Client ////////////////////
@@ -329,6 +338,7 @@ class Client	:	public Fdmanager
 	private	:
 		e_client_status		status;
 		Server	*		server;
+		Resource *		published_resource;
 		Request			request;
 		Response		response;
 		unsigned long	last_request_ms;
@@ -344,17 +354,17 @@ class Client	:	public Fdmanager
 
 		//setter
 		void		setStatus(e_client_status status);
-		void		setRemainBody(long long remain_body);
 		void		setLastRequestMs(unsigned long last_request_ms);
 		void		setFdRead(int fd_read);
 		void		setFdWrite(int fd_write);
+		void		setPulishedResource(Resource *published_resource);
 
 		//getter
+		Resource *	getPulishedResource();
 		Server *	getServer();
 		Request		&getRequest();
 		Response		&getResponse();
 		e_client_status	getStatus();
-		long long	getRemainBody();
 		unsigned long getLastRequestMs();
 		int		getFdRead();
 		int		getFdWrite();

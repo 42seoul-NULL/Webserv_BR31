@@ -25,20 +25,31 @@
 # SERVER_SOFTWARE=418-IAmATeapot
 
 
-export CONTENT_LENGTH=4
-export GATEWAY_INTERFACE=CGI/1.1
-export HTTP_Accept=*/*
-export HTTP_Connection=keep-alive
-export HTTP_Host=localhost:82
-export PATH_INFO=/youpi.bla
-export REQUEST_URI=/youpi.bla
-export PATH_TRANSLATED=./youpi.bla
-export REMOTE_ADDR=0.0.0.0
-export REQUEST_METHOD=GET
-export SCRIPT_NAME=./cgi_tester
-export SERVER_NAME=localhost
-export SERVER_PORT=82
-export SERVER_PROTOCOL=HTTP/1.1
-export SERVER_SOFTWARE=hski
+CONTENT_LENGTH=8
+GATEWAY_INTERFACE=CGI/1.1
+HTTP_Accept=*/*
+HTTP_Accept-Encoding=gzip, deflate, br
+HTTP_Connection=keep-alive
+HTTP_Content-Length=8
+HTTP_Host=localhost:8080
+HTTP_Postman-Token=6c3f2cab-3731-4c56-9040-760190eb8568
+HTTP_Transfer-Encoding=
+HTTP_User-Agent=PostmanRuntime/7.28.0
+HTTP_asdfasdf=asdfasdf
+PATH_INFO=/test/man
+PATH_TRANSLATED=./tests/test1_tester/test1_tester_root/YoupiBanane/youpi.bla
+QUERY_STRING=hoyhoy
+REDIRECT_STATUS=200
+REMOTE_ADDR=127.0.0.1
+REQUEST_METHOD=POST
+REQUEST_URI=/test/man
+SCRIPT_FILENAME=./tests/test1_tester/test1_tester_root/YoupiBanane/youpi.bla
+SCRIPT_NAME=./tests/tester_bin/cgi_tester
+SERVER_NAME=default_server
+SERVER_PORT=8080
+SERVER_PROTOCOL=HTTP/1.1
+SERVER_SOFTWARE=too_many_drivers_without_license
+
+
 
 ./cgi_tester youpi.bla

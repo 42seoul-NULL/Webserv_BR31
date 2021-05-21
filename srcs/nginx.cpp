@@ -49,13 +49,13 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 		Resource *res = dynamic_cast<Resource *>(fdmanager);
 		if (res->isFdToRawData()) // read해서 어딘가의 client 의 raw 에 적어야한다.
 		{
-			std::cout << "Resource insert into reads" << std::endl;
+			std::cout << std::endl << "Resource insert into reads" << std::endl;
 			FT_FD_SET(fd, &(this->reads));
 			FT_FD_SET(fd, &(this->errors));
 		}
 		else if (res->isRawDataToFd()) // 어딘가의 client 의 raw에서 읽어서 fd에 write 해야 한다.
 		{
-			std::cout << "Resource insert into writes" << std::endl;
+			std::cout << std::endl << "Resource insert into writes" << std::endl;
 			FT_FD_SET(fd, &(this->writes));
 			FT_FD_SET(fd, &(this->errors));
 		}
@@ -267,11 +267,14 @@ void	Nginx::doReadResourceFD(int i)
 	case READY:
 	{
 		len = read(resource->getFd(), buf, BUFFER_SIZE);
+
 		buf[len] = 0;
 		resource->getRawData() += buf;
 		if (len < BUFFER_SIZE) // 다읽었다.
 		{
 			resource->doNext();
+			if (resource->getPid() != -1)
+				unlink(resource->getUnlinkPath().c_str());
 			deleteFromFdPool(resource);
 		}
 		break ;
@@ -324,12 +327,16 @@ void	Nginx::doWriteClientFD(int i)
 void	Nginx::doWriteResourceFD(int i)
 {
 	Resource *res = dynamic_cast<Resource *>(this->fd_pool[i]);
-	int len;
 
-	len = write(res->getFd(), res->getRawData().c_str(), BUFFER_SIZE);
-	if (len < BUFFER_SIZE)
+	if (res->getRawData().size() < BUFFER_SIZE)
 	{
+		write(res->getFd(), res->getRawData().c_str(), res->getRawData().size());
 		res->doNext();
 		deleteFromFdPool(res);
+	}
+	else
+	{	
+		write(res->getFd(), res->getRawData().c_str(), BUFFER_SIZE);
+		res->getRawData() = res->getRawData().substr(BUFFER_SIZE);
 	}
 }
