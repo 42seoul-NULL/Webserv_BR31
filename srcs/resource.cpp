@@ -1,9 +1,10 @@
-#include "resource.hpp"
+#include "webserv.hpp"
 
 Resource::Resource(int fd, std::string& raw_data, Client *client, e_direction direction, e_nextcall next_call, int response_error_num) : raw_data(raw_data), client(client), direction(direction), next_call(next_call), response_error_num(response_error_num)
 {
 	this->fd = fd;
 	this->pid = -1;
+	this->type = FD_RESOURCE;
 }
 
 Resource::~Resource()
@@ -25,9 +26,9 @@ e_resource_is_ready_status Resource::isReady()
 		else
 		{
 			if (WIFEXITED(status) == 0) // 자식이 비정상으로 종료되었다!
-			{
 				return (CGI_CRASH);
-			}
+			else
+				return (READY); // 자식이 정상 종료 되었다!
 		}
 	}
 }
@@ -40,12 +41,11 @@ void		Resource::doNext()
 		this->client->setStatus(FILE_WRITE_DONE);
 
 	if (this->next_call == MAKE_RESPONSE)
-	{
-		// client->getResponse().makeResponse()
-	}		
+		client->getResponse().makeResponse();	
 	else
 	{
-		// client->getResponse().makeErrorResponse(this->response_error_num);
+		this->client->setStatus(RESPONSE_MAKE_DONE);
+		//client->getResponse().makeErrorResponse(this->response_error_num); // 다시 불러주지 않는다.
 	}
 }
 

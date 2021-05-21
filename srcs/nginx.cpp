@@ -1,4 +1,5 @@
-#include "Nginx.hpp"
+#include "webserv.hpp"
+
 
 Nginx::Nginx() : fd_max(-1)
 {
@@ -48,11 +49,13 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 		Resource *res = dynamic_cast<Resource *>(fdmanager);
 		if (res->isFdToRawData()) // read해서 어딘가의 client 의 raw 에 적어야한다.
 		{
+			std::cout << "Resource insert into reads" << std::endl;
 			FT_FD_SET(fd, &(this->reads));
 			FT_FD_SET(fd, &(this->errors));
 		}
 		else if (res->isRawDataToFd()) // 어딘가의 client 의 raw에서 읽어서 fd에 write 해야 한다.
 		{
+			std::cout << "Resource insert into writes" << std::endl;
 			FT_FD_SET(fd, &(this->writes));
 			FT_FD_SET(fd, &(this->errors));
 		}
@@ -174,7 +177,7 @@ bool	Nginx::run()
 					break;
 				}
 			}
-			else
+			else if (isIndexOfErrorFdSet(i, cpy_errors))
 				deleteFromFdPool(this->fd_pool[i]);
 		}
 	}
@@ -194,6 +197,14 @@ bool	Nginx::isIndexOfReadFdSet(int index, fd_set &reads)
 bool	Nginx::isIndexOfWriteFdSet(int index, fd_set &writes)
 {
 	if (FT_FD_ISSET(index, &writes))
+		return (true);
+	else
+		return (false);
+}
+
+bool	Nginx::isIndexOfErrorFdSet(int index, fd_set &errors)
+{
+	if (FT_FD_ISSET(index, &errors))
 		return (true);
 	else
 		return (false);
@@ -238,7 +249,10 @@ void	Nginx::doReadClientFD(int i)
 		///////////////////////////////
 		//추후에 추가되어야 할 부분입니다. (makeResponse 와 tryMakeRequest 가 대폭 수정 될 예정)
 	 	if ((client->getStatus() == REQUEST_RECEIVING) && (client->getRequest().tryMakeRequest() == READY_TO_MAKE_RESPONSE))
+		{
+			client->setStatus(RESPONSE_MAKING);
 	 		client->getResponse().makeResponse();
+		}
 	}
 }
 
@@ -280,26 +294,30 @@ void	Nginx::doReadResourceFD(int i)
 void	Nginx::doWriteClientFD(int i)
 {
 	Client *client = dynamic_cast<Client *>(this->fd_pool[i]);
-	int len;
 
 	if (client->getStatus() == RESPONSE_MAKE_DONE)
 	{
-		len = write(i, client->getResponse().getRawResponse().c_str(), BUFFER_SIZE);
 		std::cout << std::endl; /////////////////////////////////////
 		std::cout << client->getResponse().getRawResponse() << std::endl; //////////////////////////////
-		if (len < BUFFER_SIZE) // 다읽었다.
+
+		if (client->getResponse().getRawResponse().size() > BUFFER_SIZE)
 		{
-			if (client->getResponse().getLastResponse() == 401)
+			write(i, client->getResponse().getRawResponse().c_str(), BUFFER_SIZE);
+			client->getResponse().getRawResponse() = client->getResponse().getRawResponse().substr(BUFFER_SIZE);
+		}
+		else
+		{
+			write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().size());
+		
+			if (client->getResponse().getIsDisconnectImmediately())
 				deleteFromFdPool(client);
 			else
 			{
 				client->getRequest().initRequest();
 				client->getResponse().initResponse();
 				client->setStatus(REQUEST_RECEIVING);
-			}
+			}	
 		}
-		else // 다 읽지 못했다.
-			client->getResponse().getRawResponse() = client->getResponse().getRawResponse().substr(len);
 	}
 }
 

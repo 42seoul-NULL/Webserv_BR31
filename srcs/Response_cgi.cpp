@@ -1,6 +1,4 @@
-#include "config.hpp"
-#include "response.hpp"
-#include "nginx.hpp"
+#include "webserv.hpp"
 
 // char	**Response::makeEnv(const Request& request, Location& location)
 // {

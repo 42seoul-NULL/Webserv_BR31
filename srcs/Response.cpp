@@ -1,15 +1,19 @@
-#include "response.hpp"
-#include "config.hpp"
-#include "nginx.hpp"
+#include "webserv.hpp"
 
 Response::Response(void)
 {
 	initResponse();
 }
-/////// geter ////////
-int		Response::getLastResponse()
+
+Response::~Response()
 {
-	return (this->last_reponse);
+	
+}
+
+/////// geter ////////
+bool		Response::getIsDisconnectImmediately()
+{
+	return (this->is_disconnect_immediately);
 }
 
 std::string&	Response::getRawResponse(void)

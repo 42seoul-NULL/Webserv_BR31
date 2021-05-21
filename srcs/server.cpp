@@ -1,16 +1,15 @@
-#include "server.hpp"
-#include <iostream>
+#include "webserv.hpp"
 
 /////////////////////////////////////////////////////////
 ////////////////// class Server start ///////////////////
 Server::Server() : port(-1)
 {
-	this->type = SERVER;
+	this->type = FD_SERVER;
 }
 
 Server::Server(const Server& src)
 {
-	this->type = SERVER;
+	this->type = FD_SERVER;
 	this->ip = src.ip;
 	this->port	=	src.port;
 	this->server_name	=	src.server_name;
@@ -20,7 +19,7 @@ Server::Server(const Server& src)
 
 Server &Server::operator=(const Server &src)
 {
-	this->type = SERVER;
+	this->type = FD_SERVER;
 	this->ip = src.ip;
 	this->port	=	src.port;
 	this->server_name	=	src.server_name;

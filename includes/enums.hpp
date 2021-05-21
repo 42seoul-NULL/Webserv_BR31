@@ -4,6 +4,27 @@
 # define BUFFER_SIZE	65536
 # define CLIENT_QUE_SIZE 5
 
+# define NEEDBODY -1
+# define REQUESTCOMPLETE -2
+
+# define DATE "Date"
+# define ALLOW "Allow"
+# define CONTENT_LANGUAGE "Content_Language"
+# define CONTENT_LOCATION "Content-Location"
+# define CONTENT_TYPE "Content-Type"
+# define AUTHORIZATION "Authorization"
+# define WWW_AUTHENTICATE "WWW-Authenticate"
+# define HOST "Host"
+# define ACCEPT_CHARSET "Accept-Charset"
+# define ACCEPT_LANGUAGE "Accept-Language"
+# define REFERER "Referer"
+# define USER_AGENT "User-Agent"
+# define SERVER "Server"
+# define TRANSFER_ENCODING "Transfer-Encoding"
+# define LOCATION "Location"
+# define LAST_MODIFIED "Last-Modified"
+# define RETRY_AFTER "Retry-After"
+
 typedef enum			t_client_status
 {
 	REQUEST_RECEIVING,

@@ -1,5 +1,5 @@
-#include "request.hpp"
-#include "client.hpp"
+#include "webserv.hpp"
+
 
 Request::Request(void)
 {
@@ -44,6 +44,12 @@ e_request_try_make_request_return	Request::tryMakeRequest(void)
 		return (requestValidCheck(isComplete()));
 	}
 	return (requestValidCheck(false));
+}
+
+///////// setter ////////////
+void			Request::setClient(Client *client)
+{
+	this->client = client;
 }
 
 ///////// getter ////////////
@@ -130,10 +136,18 @@ e_request_try_make_request_return	Request::requestValidCheck(bool isComplete)
 
 		//auth check
 		if (isValidAuthHeader(loc) == false)
+		{
+			this->client->setStatus(RESPONSE_MAKING);
+			this->client->getResponse().makeErrorResponse(401);
 			return (I_MAKE_ERROR_RESPONSE);
+		}
 		//allow_method check
 		if (isValidMethod(loc) == false)
+		{
+			this->client->setStatus(RESPONSE_MAKING);
+			this->client->getResponse().makeErrorResponse(405);
 			return (I_MAKE_ERROR_RESPONSE);
+		}
 
 		//set response resource_path
 		std::string resource_path = loc.getRoot() + this->uri.substr(loc.getUriKey().size());
@@ -282,15 +296,15 @@ bool	Request::isValidAuthHeader(Location &loc)
 		char result[200];
 		ft_memset(result, 0, 200);
 				
-		if (this->headers.find(AUTHRIZATION) == this->headers.end())  // auth key 헤더가 아예 안들어왔다.
+		if (this->headers.find(AUTHORIZATION) == this->headers.end())  // auth key 헤더가 아예 안들어왔다.
 		{		
 			this->client->getResponse().makeErrorResponse(401);
 			return (false);
 		}
 		else
 		{
-			size_t idx = this->headers[AUTHRIZATION].find_first_of(' ');
-			std::string secret = this->headers[AUTHRIZATION].substr(idx + 1);
+			size_t idx = this->headers[AUTHORIZATION].find_first_of(' ');
+			std::string secret = this->headers[AUTHORIZATION].substr(idx + 1);
 			base64_decode(secret.c_str(), result, secret.size());
 			if (std::string(result) != loc.getAuthKey()) // 키가 맞지 않는다.
 			{

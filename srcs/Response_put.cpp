@@ -1,6 +1,4 @@
-#include "config.hpp"
-#include "response.hpp"
-#include "nginx.hpp"
+#include "webserv.hpp"
 
 // int		Response::makeDirectoryToCreate(const Request& request, Location &location)
 // {

@@ -1,14 +1,17 @@
 NAME = webserv
 
-SRCNAME	=	main.cpp\
+SRCNAME	=	client.cpp\
 			config.cpp\
+			fdmanager.cpp\
+			main.cpp\
+			nginx.cpp\
 			request.cpp\
-			response.cpp\
+			resource.cpp\
 			response_common.cpp\
 			response_get.cpp\
 			response_redirection.cpp\
-			fdmanager.cpp\
-			nginx.cpp
+			response.cpp\
+			server.cpp\
 
 SRCDIR = ./srcs/
 SRCS = $(addprefix $(SRCDIR), $(SRCNAME))
@@ -35,9 +38,14 @@ fclean : clean
 
 re : fclean all
 
+test : $(SRCS)
+	$(CC) $(DCFLAGS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)
+	./webserv tests/test1_tester/test1_tester.config
+
+
 dbg : $(SRCS)
 	$(CC) $(DCFLAGS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)
-	lldb webserv -- configs/test.conf
+	lldb webserv -- tests/test1_tester/test1_tester.config
 
 $(NAME) : $(LIB_DIR)$(LIB_NAME) $(SRCS)
 	$(CC) $(CFLAGS) $(SRCS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)

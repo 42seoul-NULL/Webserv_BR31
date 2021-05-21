@@ -1,5 +1,4 @@
-#include "response.hpp"
-#include "client.hpp"
+#include "webserv.hpp"
 
 void	Response::initResponse(void)
 {
@@ -15,6 +14,7 @@ void	Response::makeResponse()
 	//여기까지 왔다는 것은 method allow check 되어있고, authcheck 되어있고,
     // if (cgi_extention != "")
 	// 	return (makeCgiResponse());
+
 	if (is_redirection)
 		return (makeRedirectionResponse());
 
@@ -42,12 +42,12 @@ void	Response::makeErrorResponse(int error)
 	case RESPONSE_MAKING:
 	{
 		if (this->location->getErrorPages().count(error) == 0) // 디폴트 에러 페이지 없음.
-			addRawErrorBody();
+			addRawErrorBody(error);
 		else // 디폴트 에러 페이지 존재함.
 		{
 			int fd = open(this->location->getErrorPages()[error].c_str(), O_RDONLY);
 			if (fd == -1) // 실패 -> 디폴트페이지가 아니라 자체적으로 만들어내는 페이지로 리턴
-				addRawErrorBody();
+				addRawErrorBody(error);
 			else
 			{
 				//컨텐츠 랭스 적고 등등 해줘야함
@@ -56,16 +56,10 @@ void	Response::makeErrorResponse(int error)
 				fstat(fd, &sb);
 				addContentLength(sb.st_size);
 				this->raw_response += "\r\n";
-				setResource(fd, FD_TO_RAW_DATA); // 이녀석이 알아서 자기 상태까지 변환해줌.
-				return ;	
+				setResource(fd, FD_TO_RAW_DATA, MAKE_ERROR_RESPONSE, error); // 이녀석이 알아서 자기 상태까지 변환해줌.
+				return ;
 			}
 		}
-		break ;
-	}
-	case FILE_READ_DONE: // error_message가 다 작성된 상태.
-	{
-		// 디폴트 에러 페이지 존재 + 이미 다 적혔다
-		this->client->setStatus(RESPONSE_MAKE_DONE);
 		break ;
 	}
 	default:
@@ -89,9 +83,10 @@ bool	Response::isDirectory(std::string &path)
 
 void	Response::setResource(int fd, e_direction direction, e_nextcall nextcall, int error_num)
 {
+	Resource *res;
 	if (direction == RAW_DATA_TO_FD) // request 의 raw_body 에서 fd 로 써야한다
 	{
-		Resource *res = new Resource(
+		res = new Resource(
 										fd, 
 										this->client->getRequest().getRawBody(), 
 										this->client,
@@ -102,7 +97,7 @@ void	Response::setResource(int fd, e_direction direction, e_nextcall nextcall, i
 	}
 	else		// fd 에서 response 의 raw_response 로 써야한다. FD_TO_RAW_DATA
 	{
-		Resource *res = new Resource(
+		res = new Resource(
 										fd, 
 										this->raw_response, 
 										this->client,
@@ -182,7 +177,10 @@ int		Response::addContentLocation()
 
 int		Response::addContentType(const std::string &extension)
 {
-	this->raw_response += "Content-Type: " + Config::getInstance()->getMimeType()[extension] + "\r\n";
+	if (Config::getInstance()->getMimeType().count(extension) == 0) // 없다
+		this->raw_response += "Content-Type: " + Config::getInstance()->getMimeType()[".bin"] + "\r\n";
+	else // 있다.
+		this->raw_response += "Content-Type: " + Config::getInstance()->getMimeType()[extension] + "\r\n";
 	return (200);
 }
 
@@ -241,12 +239,12 @@ int		Response::addWWWAuthenticate()
 	// 첫 Client의 Request를 401 Unauthorized 로 인증 요청 후 재전송 된 Authorization 필드를 이용해 작성
 	// config의 auth_basic 관련 해서 회의 필요.
 	// 우리는 거대한 서비스 작성이 아니니 basic type 으로 고정
-	this->last_reponse = 401;
+	this->is_disconnect_immediately = true;
 	this->raw_response += "WWW-Authenticate: Basic realm=\"Give me ID:PASS encoded base64\"";
 	return (200);
 }
 
-void	Response::addRawErrorBody()
+void	Response::addRawErrorBody(int error)
 {
 	std::string temp;
 	makeDefaultErrorBody(temp, error);

@@ -1,6 +1,7 @@
-#include "fdmanager.hpp"
+#include "webserv.hpp"
 
-Fdmanager::Fdmanager() : fd(-1), type(BASE)
+
+Fdmanager::Fdmanager() : fd(-1), type(FD_BASE)
 {
 
 }

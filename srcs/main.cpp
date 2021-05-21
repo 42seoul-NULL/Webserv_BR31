@@ -1,6 +1,5 @@
-#include "libft.hpp"
-#include "config.hpp"
-#include "nginx.hpp"
+#include "webserv.hpp"
+
 
 int	main(int ac, char **av)
 {
