@@ -76,18 +76,18 @@ void	Response::makeCgiResponse()
 	{
 		//처음 왔다. 아무것도 준비되지 않았다.
 		int fds[2];
+		
 		if ( (pipe(fds)) == -1 )  // fds[0] -> read ,   fds[1] -> write
 			return (makeErrorResponse(500));
 		this->client->setFdRead(fds[0]);
 		this->client->setFdWrite(fds[1]);
-		setResource(fds[1], RAW_DATA_TO_FD, MAKE_RESPONSE);
-		return ;
-		break ;
-	}
-	case FILE_WRITE_DONE:   // 알아서 읽어져서 왔다.
-	{
+
+		fcntl(fds[1], F_SETFL, O_NONBLOCK);
+		setResource(fds[1], RAW_DATA_TO_FD, MAKE_RESPONSE, -1);
+
 		std::string temp_file_name = "tempfile_" + ft_itoa(this->client->getFdRead());
 		int fd_temp = open(temp_file_name.c_str(), O_CREAT | O_TRUNC | O_RDWR, 0666);
+
 
 		if (fd_temp == -1)
 			return (makeErrorResponse(500));
@@ -125,6 +125,8 @@ void	Response::makeCgiResponse()
 	}
 	case FILE_READ_DONE:
 	{
+		std::cout << "cgi output file read done" << std::endl;
+
 		close(client->getFdRead());
 		close(client->getFdWrite());
 		try
@@ -136,6 +138,9 @@ void	Response::makeCgiResponse()
 			first_line = "HTTP/1.1 " + this->raw_response.substr(first_line_idx1, first_line_idx2 - first_line_idx1) + "\r\n"; 
 
 			int content_size = this->raw_response.substr(this->raw_response.find("\r\n\r\n") + 4).size();
+	
+			std::cout << content_size << std::endl;
+
 			this->raw_response = first_line + 
 								("Content-Length: " + ft_itoa(content_size) + "\r\n") +
 								this->raw_response;

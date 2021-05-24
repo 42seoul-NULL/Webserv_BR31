@@ -16,32 +16,101 @@ void	Request::initRequest(void)
 	this->headers.clear();
 	this->raw_body.clear();
 	this->temp_body.clear();
-	body_receving = false;
-	body_length_info_type = NOTHING;
+	this->status = HEADER_PARING;
+	this->remain_body_value = 0;
 }
 
-e_request_try_make_request_return	Request::tryMakeRequest(void)
+bool			Request::tryMakeRequest(void)
 {
-	std::size_t	found = this->raw_request.find("\r\n\r\n");
-	int	res = 1;
+	size_t		idx;
 
-	if (found != std::string::npos && this->body_receving == false) //header receive done!
+	switch (this->status)
 	{
-		this->makeStartLine();
-		this->makeRequestHeader();
-		this->body_receving = true;
-		res = bodyCheck();
-		if (res == false)
+	case HEADER_PARING:
+	{
+		idx = this->raw_request.find("\r\n\r\n");
+		if (idx == std::string::npos) // 못찾았을 경우 이대로 종료
+			return (requestValidCheck(false));
+		else // 찾았을 경우
 		{
-			this->temp_body.clear();
+			makeStartLine();
+			makeRequestHeader(); // 헤더까지 모두 만든다.
+			//헤더를 만들고 난 직후이므로,
+			if (this->headers.count(CONTENT_LENGTH) == 1) // content length 필드가 있다 -> 컨텐츠바디리시빙
+			{
+				this->remain_body_value = ft_atoi(headers[CONTENT_LENGTH]);
+				if (this->remain_body_value == 0)
+					return (requestValidCheck(true));
+				this->status = LENGTH_BODY_RECEIVING;
+				return (tryMakeRequest()); // length_body 로 재귀
+			}
+			else if (this->headers.count(TRANSFER_ENCODING) == 1 && this->headers[TRANSFER_ENCODING] == "chunked")
+			{
+				// remain_body 를 잴수 있을지 없을지 모른다.
+				this->status = CHUNKED_LENGTH_RECEIVING;
+				return (tryMakeRequest());
+			}
+			else
+				return (requestValidCheck(true)); // 바디가 없다는 뜻이니까
+		}
+		break ;
+	}
+	case LENGTH_BODY_RECEIVING:
+	{
+		if (this->remain_body_value <= this->raw_request.size()) // 충분히 잘라낼만큼 있다.
+		{
+			this->raw_body += this->raw_request.substr(0, this->remain_body_value);
+			this->raw_request = this->raw_request.substr(this->remain_body_value);
+			this->remain_body_value = 0;
 			return (requestValidCheck(true));
 		}
+		else  //  충분하지 못하다.
+		{
+			this->raw_body += this->raw_request;
+			this->remain_body_value -= this->raw_request.size();
+			this->raw_request.clear();
+			return (requestValidCheck(false));
+		}
+		break ;
 	}
-	if (this->body_receving == true)
+	case CHUNKED_LENGTH_RECEIVING:
 	{
-		this->temp_body += raw_request;
-		raw_request.clear();
-		return (requestValidCheck(isComplete()));
+		// 아직 chunked 의 길이를 알지 못한다.
+		idx = this->raw_request.find("\r\n");
+		if (idx == std::string::npos)
+			return (requestValidCheck(false)); //
+		else // 헤더있는줄
+		{
+			//std::cout << "idx : "<< idx << std::endl;
+			this->remain_body_value = ft_atoi_hex(this->raw_request.substr(0, idx)) + 2; // 실제 데이터 뒤에 있는 \r\n 까지.
+			this->raw_request = this->raw_request.substr(idx + 2); // "\r\n" 까지 모조리 없애준다.
+			this->status = CHUNKED_BODY_RECEVING;
+			//std::cout << "true :" << (this->raw_request == "\r\n") << std::endl;
+			return (tryMakeRequest());
+		}
+		break ;
+	}
+	case CHUNKED_BODY_RECEVING:
+	{
+		//std::cout << std::endl;
+		//std::cout << "remain_body : " << this->remain_body_value << std::endl;
+		//std::cout << "raw_request : " << this->raw_request << std::endl;
+		//std::cout << (this->raw_request == "\r\n") << std::endl;
+		//std::cout << "raw_request_size : " << this->raw_request.size() << std::endl;
+		if (this->remain_body_value <= this->raw_request.size()) // 충분히 잘라낼만큼 있다. // (뒤에있는 \r\n 까지)
+		{
+			std::string temp_raw_request = this->raw_request.substr(0, this->remain_body_value - 2); // 뒤에있는 \r\n 제외하고 끊어내준다.
+			this->raw_body += temp_raw_request;
+			this->raw_request = this->raw_request.substr(this->remain_body_value); // 뒤에있는 \r\n 까지 끊어준다.
+			this->remain_body_value = 0;
+			if (temp_raw_request.size() == 0) // 0 chunked 였다.
+				return (requestValidCheck(true));
+			this->status = CHUNKED_LENGTH_RECEIVING;
+		}
+		break ;
+	}
+	default:
+		break ;
 	}
 	return (requestValidCheck(false));
 }
@@ -124,59 +193,8 @@ int		 	Request::base64_decode(const char * text, char * dst, int numBytes)
     return space_idx;
 }
 
-e_request_try_make_request_return	Request::requestValidCheck(bool isComplete)
-{
-	if (isComplete == false)
-		return (WAITING_REQUEST_MSG);
-	else
-	{
-		Location &loc = this->client->getServer()->getPerfectLocation(this->uri);
-		//set response location
-		this->client->getResponse().setLocation(&loc);
-
-		//auth check
-		if (isValidAuthHeader(loc) == false)
-		{
-			this->client->setStatus(RESPONSE_MAKING);
-			this->client->getResponse().makeErrorResponse(401);
-			return (I_MAKE_ERROR_RESPONSE);
-		}
-		//allow_method check
-		if (isValidMethod(loc) == false)
-		{
-			this->client->setStatus(RESPONSE_MAKING);
-			this->client->getResponse().makeErrorResponse(405);
-			return (I_MAKE_ERROR_RESPONSE);
-		}
-
-		//set response resource_path
-		std::string resource_path = loc.getRoot() + this->uri.substr(loc.getUriKey().size());
-		this->client->getResponse().setResourcePath(resource_path);
-
-		//set response cgi_extention
-		for (std::map<std::string, std::string>::iterator iter = loc.getCgiInfos().begin(); iter != loc.getCgiInfos().end(); iter++)
-		{
-			if (resource_path.find(iter->first) != std::string::npos) // cgi_extention 표현을 찾았다면
-			{
-				this->client->getResponse().setCgiExtention(iter->first);
-				break ;
-			}
-		}
-
-		//set is_redirection
-		if (loc.getRedirectReturn() != -1)
-			this->client->getResponse().setIsRedirection(true);
-
-		return (READY_TO_MAKE_RESPONSE);
-	}
-}
-
 void	Request::makeStartLine(void)
 {
-	std::cout << "******************************************************" << std::endl;
-	std::cout << this->raw_request << std::endl;
-	std::cout << "******************************************************" << std::endl;
-
 	this->parseMethod();
 	this->parseUri();
 	this->parseHttpVersion();
@@ -185,10 +203,6 @@ void	Request::makeStartLine(void)
 		this->raw_request = this->raw_request.substr(n + 2);
 	else
 		this->raw_request = "";
-
-	std::cout << "******************************************************" << std::endl;
-	std::cout << this->method << std::endl;
-	std::cout << "******************************************************" << std::endl;
 }
 
 void	Request::parseMethod(void)
@@ -217,7 +231,7 @@ void	Request::parseHttpVersion(void)
 
 void	Request::makeRequestHeader(void)
 {
-	std::string raw_header = this->raw_request.substr( 0, this->raw_request.find("\r\n\r\n") );
+	std::string raw_header = this->raw_request.substr(0, this->raw_request.find("\r\n\r\n") );
 
 	std::vector<std::string> split_vec;
 
@@ -236,72 +250,14 @@ void	Request::makeRequestHeader(void)
 		headers[key] = value;
 	}
 
-	// 맵 출력용
-	// for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
-	// 	std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
+	//맵 출력용
+	std::cout << std::endl;	
+	for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
+		std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
+	std::cout << std::endl;	
+
 
 	this->raw_request = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
-	//this->raw_request.clear();
-}
-
-bool	Request::bodyCheck(void)
-{
-	if (this->headers["Transfer-Encoding"] == "chunked")
-	{
-		this->body_length_info_type = CHUNKED;
-		return (true);
-	}
-	else if (this->headers["Content-Length"] != "")
-	{
-		this->body_length_info_type = CONTENT_LENGTH;
-		return (true);
-	}
-	return (false);
-}
-
-bool	Request::isComplete(void)
-{
-	std::size_t len = ft_atoi(this->headers["Content-Length"]);
-
-	if (this->body_length_info_type == CONTENT_LENGTH && this->temp_body.length() >= len)
-	{
-		this->raw_body += this->temp_body.substr(0, len);
-		this->raw_request += this->temp_body.substr(len); // 다음 리퀘스트가 한 번에 붙어서 오면 어떻게 처리해야하는가?
-		temp_body.clear();
-		return (true);
-	}
-	else if (this->body_length_info_type == CHUNKED)
-	{
-		std::size_t found = this->temp_body.find("\r\n");
-		std::size_t	chunk_size;
-
-		while  (found != std::string::npos)
-		{
-			chunk_size = ft_atoi_hex(this->temp_body.substr(0, found));
-			if (chunk_size == 0)
-			{
-				if (temp_body.length() > found + 3)
-				this->raw_request += this->temp_body.substr(found + 4);
-				this->temp_body.clear();
-				return (true);
-			}
-			std::string str = this->temp_body.substr(found + 2);
-			//this->temp_body = this->temp_body.substr(found + 2);
-
-			if (str.length() >= chunk_size)
-			{
-				//found = str.find("\r\n");
-				this->raw_body = this->raw_body + str.substr(0, chunk_size);
-				temp_body = "";
-				if (temp_body.length() > chunk_size + 1)
-					this->temp_body = str.substr(chunk_size + 2);
-				found = this->temp_body.find("\r\n");
-			}
-			else
-				break ;
-		}
-	}
-	return (false);
 }
 
 bool	Request::isValidAuthHeader(Location &loc)
@@ -343,4 +299,51 @@ bool	Request::isValidMethod(Location &loc)
 	if (isAllowCheckOkay != true) // allow method check 가 안되었다. -> 405
 		return (false);
 	return (true);
+}
+
+bool	Request::requestValidCheck(bool isComplete)
+{
+	if (isComplete == false)
+		return (false);
+	else
+	{
+		Location &loc = this->client->getServer()->getPerfectLocation(this->uri);
+		//set response location
+		this->client->getResponse().setLocation(&loc);
+
+		//auth check
+		if (isValidAuthHeader(loc) == false)
+		{
+			this->client->setStatus(RESPONSE_MAKING);
+			this->client->getResponse().makeErrorResponse(401);
+			return (false);
+		}
+		//allow_method check
+		if (isValidMethod(loc) == false)
+		{
+			this->client->setStatus(RESPONSE_MAKING);
+			this->client->getResponse().makeErrorResponse(405);
+			return (false);
+		}
+
+		//set response resource_path
+		std::string resource_path = loc.getRoot() + this->uri.substr(loc.getUriKey().size());
+		this->client->getResponse().setResourcePath(resource_path);
+
+		//set response cgi_extention
+		for (std::map<std::string, std::string>::iterator iter = loc.getCgiInfos().begin(); iter != loc.getCgiInfos().end(); iter++)
+		{
+			if (resource_path.find(iter->first) != std::string::npos) // cgi_extention 표현을 찾았다면
+			{
+				this->client->getResponse().setCgiExtention(iter->first);
+				break ;
+			}
+		}
+
+		//set is_redirection
+		if (loc.getRedirectReturn() != -1)
+			this->client->getResponse().setIsRedirection(true);
+
+		return (true);
+	}
 }
