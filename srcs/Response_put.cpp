@@ -46,7 +46,7 @@ void		Response::makePutResponse()
 				}
 				addDate();
 				addContentLength(0);
-				this->raw_response += "\r\n";
+				addEmptyline();
 				setResource(fd, RAW_DATA_TO_FD, MAKE_RESPONSE);
 			}
 			break ;
