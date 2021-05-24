@@ -11,6 +11,7 @@ Nginx::Nginx() : fd_max(-1)
 
 Nginx::~Nginx()
 {
+
 	std::cerr << "Nginx Down" << std::endl;
 }
 
@@ -49,13 +50,11 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 		Resource *res = dynamic_cast<Resource *>(fdmanager);
 		if (res->isFdToRawData()) // read해서 어딘가의 client 의 raw 에 적어야한다.
 		{
-			std::cout << std::endl << "Resource insert into reads" << std::endl;
 			FT_FD_SET(fd, &(this->reads));
 			FT_FD_SET(fd, &(this->errors));
 		}
 		else if (res->isRawDataToFd()) // 어딘가의 client 의 raw에서 읽어서 fd에 write 해야 한다.
 		{
-			std::cout << std::endl << "Resource insert into writes" << std::endl;
 			FT_FD_SET(fd, &(this->writes));
 			FT_FD_SET(fd, &(this->errors));
 		}
@@ -92,7 +91,6 @@ bool	Nginx::initServers()
 			throw strerror(errno);
 
 		std::cout << "Server " << iter->second.getServerName() << "(" << iter->second.getIP() << ":" << iter->second.getPort() << ") started" << std::endl;
-
 		// 서버소켓은 read 와 error 만 검사.
 		FT_FD_SET(iter->second.getFd(), &(this->reads));
 		FT_FD_SET(iter->second.getFd(), &(this->errors));
@@ -219,20 +217,16 @@ void	Nginx::doReadServerFd(int i)
 	struct sockaddr_in  client_addr;
 	socklen_t			addr_size = sizeof(client_addr);
 
-	std::cout << "\033[32mserver connection called \033[0m" << std::endl;
 	int client_socket = accept(i, (struct sockaddr*)&client_addr, &addr_size);
 
 	Client* temp_client = new Client(server, client_socket);
 	temp_client->setLastRequestMs(ft_get_time());
 
 	insertToFdpool(temp_client);
-	std::cout << "connected client : " << client_socket << std::endl;
 }
 
 void	Nginx::doReadClientFD(int i)
 {
-	//std::cout << "\033[34mclient socket read called \033[0m" << std::endl;
-
 	Client *client = dynamic_cast<Client *>(this->fd_pool[i]);
 	int		len;
 	char	buf[BUFFER_SIZE + 1];
@@ -240,15 +234,12 @@ void	Nginx::doReadClientFD(int i)
 	client->setLastRequestMs(ft_get_time());
 	len = read(i, buf, BUFFER_SIZE);
 	if (len <= 0)
-	{
-		std::cout << "disconnected : " << i << " in Server" << std::endl;
 		deleteFromFdPool(client);
-	}
 	else
 	{
 		buf[len] = 0;
 		client->getRequest().getRawRequest() += buf; // 무조건 더한다. (다음 리퀘스트가 미리 와있을 수 있다.)
-		
+
 		//추후에 추가되어야 할 부분입니다. (makeResponse 와 tryMakeRequest 가 대폭 수정 될 예정)
 	 	if ((client->getStatus() == REQUEST_RECEIVING) && (client->getRequest().tryMakeRequest() == true))
 		{
@@ -315,7 +306,6 @@ void	Nginx::doWriteClientFD(int i)
 				deleteFromFdPool(client);
 			else
 			{
-				std::cout << "Response socket : " << i << " done" << std::endl;
 				client->getRequest().initRequest();
 				client->getResponse().initResponse();
 				client->setStatus(REQUEST_RECEIVING);
