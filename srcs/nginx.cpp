@@ -123,7 +123,7 @@ bool	Nginx::run()
 
 	while (1)
 	{
-		//usleep(5); // cpu 점유가 100% 까지 올라가는 것을 막기 위해서
+		usleep(5); // cpu 점유가 100% 까지 올라가는 것을 막기 위해서
 		cpy_reads = this->reads;
 		cpy_writes = this->writes;
 		cpy_errors = this->errors;
@@ -178,7 +178,10 @@ bool	Nginx::run()
 				}
 			}
 			else if (isIndexOfErrorFdSet(i, cpy_errors))
+			{
+				std::cout << "error socket : " << i << " deleted" << std::endl;
 				deleteFromFdPool(this->fd_pool[i]);
+			}
 		}
 	}
 	return (true);
@@ -216,7 +219,7 @@ void	Nginx::doReadServerFd(int i)
 	struct sockaddr_in  client_addr;
 	socklen_t			addr_size = sizeof(client_addr);
 
-	std::cout << "\033[32m server connection called \033[0m" << std::endl;
+	std::cout << "\033[32mserver connection called \033[0m" << std::endl;
 	int client_socket = accept(i, (struct sockaddr*)&client_addr, &addr_size);
 
 	Client* temp_client = new Client(server, client_socket);
@@ -228,7 +231,7 @@ void	Nginx::doReadServerFd(int i)
 
 void	Nginx::doReadClientFD(int i)
 {
-	std::cout << "\033[34m client socket read called \033[0m" << std::endl;
+	//std::cout << "\033[34mclient socket read called \033[0m" << std::endl;
 
 	Client *client = dynamic_cast<Client *>(this->fd_pool[i]);
 	int		len;
@@ -245,10 +248,9 @@ void	Nginx::doReadClientFD(int i)
 	{
 		buf[len] = 0;
 		client->getRequest().getRawRequest() += buf; // 무조건 더한다. (다음 리퀘스트가 미리 와있을 수 있다.)
-		std::cout << buf;
-		///////////////////////////////
+		
 		//추후에 추가되어야 할 부분입니다. (makeResponse 와 tryMakeRequest 가 대폭 수정 될 예정)
-	 	if ((client->getStatus() == REQUEST_RECEIVING) && (client->getRequest().tryMakeRequest() == READY_TO_MAKE_RESPONSE))
+	 	if ((client->getStatus() == REQUEST_RECEIVING) && (client->getRequest().tryMakeRequest() == true))
 		{
 			client->setStatus(RESPONSE_MAKING);
 	 		client->getResponse().makeResponse();
@@ -300,22 +302,18 @@ void	Nginx::doWriteClientFD(int i)
 
 	if (client->getStatus() == RESPONSE_MAKE_DONE)
 	{
-		std::cout << std::endl; /////////////////////////////////////
-		std::cout << client->getResponse().getRawResponse() << std::endl; //////////////////////////////
+		size_t len;
 
-		if (client->getResponse().getRawResponse().size() > BUFFER_SIZE)
+		len = write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().size());
+		if (len < client->getResponse().getRawResponse().size()) // 다 안쓰였다.
+			client->getResponse().getRawResponse() = client->getResponse().getRawResponse().substr(len);
+		else // 다쓰였다.
 		{
-			write(i, client->getResponse().getRawResponse().c_str(), BUFFER_SIZE);
-			client->getResponse().getRawResponse() = client->getResponse().getRawResponse().substr(BUFFER_SIZE);
-		}
-		else
-		{
-			write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().size());
-
 			if (client->getResponse().getIsDisconnectImmediately())
 				deleteFromFdPool(client);
 			else
 			{
+				std::cout << "Response socket : " << i << " done" << std::endl;
 				client->getRequest().initRequest();
 				client->getResponse().initResponse();
 				client->setStatus(REQUEST_RECEIVING);
@@ -327,15 +325,14 @@ void	Nginx::doWriteClientFD(int i)
 void    Nginx::doWriteResourceFD(int i)
 {
     Resource *res = dynamic_cast<Resource *>(this->fd_pool[i]);
-    if (res->getRawData().size() < BUFFER_SIZE)
-    {
-        write(res->getFd(), res->getRawData().c_str(), res->getRawData().size());
+	size_t len;
+
+	len = write(res->getFd(), res->getRawData().c_str(), res->getRawData().size());
+	if (len < res->getRawData().size())
+		res->getRawData() = res->getRawData().substr(len);
+	else
+	{
         res->doNext();
         deleteFromFdPool(res);
-    }
-    else
-    {
-        write(res->getFd(), res->getRawData().c_str(), BUFFER_SIZE);
-        res->getRawData() = res->getRawData().substr(BUFFER_SIZE);
-    }
+	}
 }

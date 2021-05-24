@@ -8,7 +8,6 @@ char	**Response::makeCgiEnv()
 	size_t								idx;
 	std::map<std::string, std::string>	&headers = this->client->getRequest().getHeaders();
 	
-	// request_uri : ~~~/asnioefni.bla/asdf/efef/?asneiofnaiosenfioasdfm
 	std::string request_uri = this->client->getRequest().getUri();
 	std::string path_info = request_uri.substr(request_uri.find(this->cgi_extention) + (this->cgi_extention.size()));
 	std::string query_string;
@@ -77,18 +76,18 @@ void	Response::makeCgiResponse()
 	{
 		//처음 왔다. 아무것도 준비되지 않았다.
 		int fds[2];
+		
 		if ( (pipe(fds)) == -1 )  // fds[0] -> read ,   fds[1] -> write
 			return (makeErrorResponse(500));
 		this->client->setFdRead(fds[0]);
 		this->client->setFdWrite(fds[1]);
-		setResource(fds[1], RAW_DATA_TO_FD, MAKE_RESPONSE);
-		return ;
-		break ;
-	}
-	case FILE_WRITE_DONE:   // 알아서 읽어져서 왔다.
-	{
+
+		fcntl(fds[1], F_SETFL, O_NONBLOCK);
+		setResource(fds[1], RAW_DATA_TO_FD, MAKE_RESPONSE, -1);
+
 		std::string temp_file_name = "tempfile_" + ft_itoa(this->client->getFdRead());
 		int fd_temp = open(temp_file_name.c_str(), O_CREAT | O_TRUNC | O_RDWR, 0666);
+
 
 		if (fd_temp == -1)
 			return (makeErrorResponse(500));
@@ -126,9 +125,10 @@ void	Response::makeCgiResponse()
 	}
 	case FILE_READ_DONE:
 	{
+		std::cout << "cgi output file read done" << std::endl;
+
 		close(client->getFdRead());
 		close(client->getFdWrite());
-
 		try
 		{
 			std::string first_line;
@@ -137,7 +137,21 @@ void	Response::makeCgiResponse()
 
 			first_line = "HTTP/1.1 " + this->raw_response.substr(first_line_idx1, first_line_idx2 - first_line_idx1) + "\r\n"; 
 
+			// add date//
+			time_t t;
+			char buffer[4096];
+			struct tm* timeinfo;
+
+			t = time(NULL);
+			timeinfo = localtime(&t);
+			strftime(buffer, 4096, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+			first_line += "Date: " + std::string(buffer) + "\r\n";
+			// add date //
+			first_line += "Content-Language: ko\r\n";
+			
+
 			int content_size = this->raw_response.substr(this->raw_response.find("\r\n\r\n") + 4).size();
+
 			this->raw_response = first_line + 
 								("Content-Length: " + ft_itoa(content_size) + "\r\n") +
 								this->raw_response;

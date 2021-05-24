@@ -5,6 +5,7 @@ Resource::Resource(int fd, std::string& raw_data, Client *client, e_direction di
 	this->fd = fd;
 	this->pid = -1;
 	this->type = FD_RESOURCE;
+	this->is_seeked = false;
 }
 
 Resource::~Resource()
@@ -19,7 +20,6 @@ e_resource_is_ready_status Resource::isReady()
 
 	if (pid == -1) // 자식이 없다.
 	{
-		std::cout << "here" << std::endl;
 		return (READY);
 	}
 	else
@@ -33,7 +33,11 @@ e_resource_is_ready_status Resource::isReady()
 				return (CGI_CRASH);
 			else
 			{
-				lseek(this->fd, 0, SEEK_SET); // 자식이 쓴것이기 때문에 가장 앞으로 다시 이동.
+				if (this->is_seeked == false)
+				{
+					lseek(this->fd, 0, SEEK_SET); // 자식이 쓴것이기 때문에 가장 앞으로 다시 이동.
+					this->is_seeked = true;
+				}
 				return (READY); // 자식이 정상 종료 되었다!
 			}
 		}

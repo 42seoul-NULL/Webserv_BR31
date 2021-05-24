@@ -10,6 +10,12 @@ void		Response::makeGetResponse()
 	//FILE_WRITE_DONE,
 	//RESPONSE_MAKE_DONE
 
+    if ((this->client->getRequest().getMethod() == "POST") && (this->client->getRequest().getRawBody().size() > (size_t)(this->location->getRequestMaxBodySize())  ))
+    {
+        makeErrorResponse(413);
+        return ;        
+    }
+
     switch (this->client->getStatus())
     {
     case RESPONSE_MAKING:
@@ -31,14 +37,14 @@ void		Response::makeGetResponse()
 
             bool is_exist = false;
             std::string temp_path;
-            for (std::list<std::string>::iterator iter = this->location->getIndex().begin(); iter != this->location->getIndex().end(); iter++)
+            for (std::list<std::string>::iterator iter = this->location->getIndex().begin(); iter != this->location->getIndex().end(); iter++) // index 페이지 중 일치하는거 있는지!
             {
                 temp_path = (this->resource_path + (*iter));
                 is_exist = isExist(temp_path);
                 if ( is_exist == true )
                     break ;
             }
-            if (is_exist == false && this->location->getAutoIndex())
+            if (is_exist == false && this->location->getAutoIndex()) // index 페이지에 없고, 오토인덱스 on 이면
                 return (makeAutoIndexPage());
             this->resource_path = temp_path;
         }
@@ -61,7 +67,7 @@ void		Response::makeGetResponse()
             return (makeErrorResponse(500));
         }
         addContentLength((int)sb.st_size);
-        this->raw_response += "\r\n";
+        addEmptyline();
 
         setResource(fd, FD_TO_RAW_DATA, MAKE_RESPONSE);
         return ;
@@ -111,7 +117,7 @@ void		Response::makeAutoIndexPage()
 	addDate();
 	this->raw_response += "Content-Type: " + Config::getInstance()->getMimeType()[".html"] + "\r\n";
 	this->raw_response += "Content-Length: " + ft_itoa(body.size()) + "\r\n";
-	this->raw_response += "\r\n";
+	addEmptyline();
 	this->raw_response += body;
     this->client->setStatus(RESPONSE_MAKE_DONE);
 }
