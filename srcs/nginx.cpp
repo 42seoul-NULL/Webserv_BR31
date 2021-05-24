@@ -231,7 +231,7 @@ void	Nginx::doReadServerFd(int i)
 
 void	Nginx::doReadClientFD(int i)
 {
-	std::cout << "\033[34mclient socket read called \033[0m" << std::endl;
+	//std::cout << "\033[34mclient socket read called \033[0m" << std::endl;
 
 	Client *client = dynamic_cast<Client *>(this->fd_pool[i]);
 	int		len;
@@ -308,8 +308,17 @@ void	Nginx::doWriteClientFD(int i)
 		//std::cout << std::endl; /////////////////////////////////////
 		//std::cout << client->getResponse().getRawResponse() << std::endl; //////////////////////////////
 
-		static int j;
-		std::cout << j++ << " :" << client->getResponse().getRawResponse().size() << std::endl;
+
+		// write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().size());
+		// std::cout << "client " << i << " response done" << std::endl;
+		// if (client->getResponse().getIsDisconnectImmediately())
+		// 	deleteFromFdPool(client);
+		// else
+		// {
+		// 	client->getRequest().initRequest();
+		// 	client->getResponse().initResponse();
+		// 	client->setStatus(REQUEST_RECEIVING);
+		// }
 
 		if (client->getResponse().getRawResponse().size() > BUFFER_SIZE) // 써야될 사이즈가 버퍼사이즈보다 크다면 
 		{
@@ -319,6 +328,8 @@ void	Nginx::doWriteClientFD(int i)
 		else
 		{
 			write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().size());
+
+			std::cout << "client " << i << " response done" << std::endl;
 
 			if (client->getResponse().getIsDisconnectImmediately())
 				deleteFromFdPool(client);

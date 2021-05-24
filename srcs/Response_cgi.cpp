@@ -136,10 +136,21 @@ void	Response::makeCgiResponse()
 			size_t first_line_idx2 = this->raw_response.find("\r\n", first_line_idx1);
 
 			first_line = "HTTP/1.1 " + this->raw_response.substr(first_line_idx1, first_line_idx2 - first_line_idx1) + "\r\n"; 
+			// add date//
+			time_t t;
+			char buffer[4096];
+			struct tm* timeinfo;
+
+			t = time(NULL);
+			timeinfo = localtime(&t);
+			strftime(buffer, 4096, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+			first_line += "Date: " + std::string(buffer) + "\r\n";
+			// add date //
+			first_line += "Content-Language: ko\r\n";
+			
+
 
 			int content_size = this->raw_response.substr(this->raw_response.find("\r\n\r\n") + 4).size();
-	
-			std::cout << content_size << std::endl;
 
 			this->raw_response = first_line + 
 								("Content-Length: " + ft_itoa(content_size) + "\r\n") +
