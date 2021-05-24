@@ -7,6 +7,7 @@ void	Response::initResponse(void)
 	this->is_redirection = false;
 	this->cgi_extention.clear();
 	this->location = NULL;
+	this->write_index = 0;
 }
 
 void	Response::makeResponse()

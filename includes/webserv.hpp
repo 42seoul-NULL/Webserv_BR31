@@ -183,6 +183,7 @@ class Resource	:	public Fdmanager
 		e_direction	direction;
 		e_nextcall	next_call;
 		int	response_error_num;
+		size_t		write_index;
 
 		int			pid;
 		bool		is_seeked;
@@ -200,12 +201,14 @@ class Resource	:	public Fdmanager
 		void		setResponseErrorNum(int response_error_num);
 		void		setPid(int pid);
 		void		setUnlinkPath(const std::string& unlink_path);
+		void		setWriteIndex(size_t write_index);
 
 		//getter
 		int			getPid();
 		const std::string &getUnlinkPath();
 		std::string &getRawData();
 		Client		*getClient();
+		size_t		getWriteIndex();
 };
 
 ////////////////// Request /////////////////////
@@ -271,6 +274,7 @@ class Response
 		Location *location;
 		std::string cgi_extention;
 		bool	is_redirection;
+		size_t	write_index;
 
 	public :
 		Response(void);
@@ -279,13 +283,14 @@ class Response
 		//getter
 		bool		getIsDisconnectImmediately();
 		std::string&	getRawResponse(void);
-
+		size_t	getWriteIndex();
 		//setter
 		void	setLocation(Location *location);
 		void	setClient(Client *client);
 		void	setResourcePath(const std::string &resource_path);
 		void	setCgiExtention(const std::string &cgi_extention);
 		void	setIsRedirection(bool is_redirection);
+		void	setWriteIndex(size_t index);
 
 		//response_common
 		void	initResponse(void);

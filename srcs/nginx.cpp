@@ -303,10 +303,12 @@ void	Nginx::doWriteClientFD(int i)
 	if (client->getStatus() == RESPONSE_MAKE_DONE)
 	{
 		size_t len;
+		size_t w_idx = client->getResponse().getWriteIndex();
+		const char *current_str = client->getResponse().getRawResponse().c_str() + w_idx;
 
-		len = write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().size());
-		if (len < client->getResponse().getRawResponse().size()) // 다 안쓰였다.
-			client->getResponse().getRawResponse() = client->getResponse().getRawResponse().substr(len);
+		len = write(i, current_str, client->getResponse().getRawResponse().size() - w_idx);
+		if (len < client->getResponse().getRawResponse().size() - w_idx) // 다 안쓰였다.
+			client->getResponse().setWriteIndex( w_idx + len );
 		else // 다쓰였다.
 		{
 			if (client->getResponse().getIsDisconnectImmediately())
@@ -327,9 +329,12 @@ void    Nginx::doWriteResourceFD(int i)
     Resource *res = dynamic_cast<Resource *>(this->fd_pool[i]);
 	size_t len;
 
-	len = write(res->getFd(), res->getRawData().c_str(), res->getRawData().size());
-	if (len < res->getRawData().size())
-		res->getRawData() = res->getRawData().substr(len);
+	size_t w_idx = res->getWriteIndex();
+	const char *current_str = res->getRawData().c_str() + w_idx;
+
+	len = write(res->getFd(), current_str, res->getRawData().size() - w_idx);
+	if (len < res->getRawData().size() - w_idx)
+		res->setWriteIndex( w_idx + len);
 	else
 	{
         res->doNext();
