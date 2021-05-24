@@ -12,10 +12,7 @@ int	main(int ac, char **av)
 
 	Nginx nginx;
 	Config::getInstance()->setNginx(&nginx);
-//	struct timeval		timeout;
 
-	// timeout.tv_sec = 5; // last request time out 5000ms
-	// timeout.tv_usec = 0;
 	try
 	{
 		nginx.initServers();

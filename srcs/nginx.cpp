@@ -189,7 +189,7 @@ bool	Nginx::run()
 // run()'s
 bool	Nginx::isIndexOfReadFdSet(int index, fd_set &reads)
 {
-	if (FT_FD_ISSET(index, &reads))
+	if (FT_FD_ISSET(index, &reads) && (this->fd_pool[index] != NULL))
 		return (true);
 	else
 		return (false);
@@ -197,7 +197,7 @@ bool	Nginx::isIndexOfReadFdSet(int index, fd_set &reads)
 
 bool	Nginx::isIndexOfWriteFdSet(int index, fd_set &writes)
 {
-	if (FT_FD_ISSET(index, &writes))
+	if (FT_FD_ISSET(index, &writes) && (this->fd_pool[index] != NULL))
 		return (true);
 	else
 		return (false);
@@ -205,7 +205,7 @@ bool	Nginx::isIndexOfWriteFdSet(int index, fd_set &writes)
 
 bool	Nginx::isIndexOfErrorFdSet(int index, fd_set &errors)
 {
-	if (FT_FD_ISSET(index, &errors))
+	if (FT_FD_ISSET(index, &errors) && (this->fd_pool[index] != NULL))
 		return (true);
 	else
 		return (false);
@@ -296,7 +296,7 @@ void	Nginx::doWriteClientFD(int i)
 		size_t len;
 		size_t w_idx = client->getResponse().getWriteIndex();
 		const char *current_str = client->getResponse().getRawResponse().c_str() + w_idx;
-
+		
 		len = write(i, current_str, client->getResponse().getRawResponse().size() - w_idx);
 		if (len < client->getResponse().getRawResponse().size() - w_idx) // 다 안쓰였다.
 			client->getResponse().setWriteIndex( w_idx + len );
@@ -324,7 +324,7 @@ void    Nginx::doWriteResourceFD(int i)
 
 	len = write(res->getFd(), current_str, res->getRawData().size() - w_idx);
 	if (len < res->getRawData().size() - w_idx)
-		res->setWriteIndex( w_idx + len);
+		res->setWriteIndex( w_idx + len );
 	else
 	{
         res->doNext();

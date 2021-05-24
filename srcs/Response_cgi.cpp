@@ -118,7 +118,7 @@ void	Response::makeCgiResponse()
 			Resource *res = new Resource(fd_temp, this->raw_response, this->client, FD_TO_RAW_DATA, MAKE_RESPONSE, -1);
 			res->setPid(pid);
 			res->setUnlinkPath(temp_file_name);
-			this->client->setPulishedResource(res);
+			this->resources.push_back(res);
 			Config::getInstance()->getNginx()->insertToFdpool(res);
 		}
 		return ;

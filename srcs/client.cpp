@@ -6,7 +6,6 @@ Client::Client()
 	this->fd = -1;
 	this->status = REQUEST_RECEIVING;
 	this->type = FD_CLIENT;
-	this->published_resource = NULL;
 }
 
 Client::Client(Server *server, int fd)
@@ -15,7 +14,6 @@ Client::Client(Server *server, int fd)
 	this->status = REQUEST_RECEIVING;
 	this->type = FD_CLIENT;
 	this->server = server;
-	this->published_resource = NULL;
 	this->request.setClient(this);
 	this->response.setClient(this);
 }
@@ -44,11 +42,6 @@ void		Client::setFdRead(int fd_read)
 void		Client::setFdWrite(int fd_write)
 {
 	this->fd_write = fd_write;
-}
-
-void		Client::setPulishedResource(Resource *published_resource)
-{
-	this->published_resource = published_resource;
 }
 
 //getter
@@ -85,9 +78,4 @@ int		Client::getFdRead()
 int		Client::getFdWrite()
 {
 	return (this->fd_write);
-}
-
-Resource *Client::getPulishedResource()
-{
-	return (this->published_resource);
 }

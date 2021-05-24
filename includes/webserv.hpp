@@ -275,6 +275,7 @@ class Response
 		std::string cgi_extention;
 		bool	is_redirection;
 		size_t	write_index;
+		std::list<Resource *> resources;
 
 	public :
 		Response(void);
@@ -355,7 +356,6 @@ class Client	:	public Fdmanager
 	private	:
 		e_client_status		status;
 		Server	*		server;
-		Resource *		published_resource;
 		Request			request;
 		Response		response;
 		unsigned long	last_request_ms;
@@ -374,10 +374,8 @@ class Client	:	public Fdmanager
 		void		setLastRequestMs(unsigned long last_request_ms);
 		void		setFdRead(int fd_read);
 		void		setFdWrite(int fd_write);
-		void		setPulishedResource(Resource *published_resource);
 
 		//getter
-		Resource *	getPulishedResource();
 		Server *	getServer();
 		Request		&getRequest();
 		Response		&getResponse();

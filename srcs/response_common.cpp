@@ -8,6 +8,7 @@ void	Response::initResponse(void)
 	this->cgi_extention.clear();
 	this->location = NULL;
 	this->write_index = 0;
+	this->resources.clear();
 }
 
 void	Response::makeResponse()
@@ -112,7 +113,7 @@ void	Response::setResource(int fd, e_direction direction, e_nextcall nextcall, i
 										error_num
 									);
 	}
-	this->client->setPulishedResource(res);
+	this->resources.push_back(res);
 	Config::getInstance()->getNginx()->insertToFdpool(res);
 
 }

@@ -7,7 +7,10 @@ Response::Response(void)
 
 Response::~Response()
 {
-	
+//	std::cout << "response destroyer called" << std::endl;
+
+	for (std::list<Resource *>::iterator iter = this->resources.begin(); iter != this->resources.end(); iter++)
+		Config::getInstance()->getNginx()->deleteFromFdPool(*iter);
 }
 
 /////// geter ////////

@@ -28,6 +28,8 @@ LIB_DIR = ./libft_cpp/
 LIB_NAME = libft.a
 
 CC = clang++
+
+#CFLAGS = -Wall -Wextra -Werror -fsanitize=address -g3 -std=c++98 
 CFLAGS = -Wall -Wextra -Werror -std=c++98
 DCFLAGS = -g $(SRCS)
 
