@@ -9,7 +9,10 @@ SRCNAME	=	client.cpp\
 			resource.cpp\
 			response_common.cpp\
 			response_get.cpp\
+			response_head.cpp\
 			response_put.cpp\
+			response_options.cpp\
+			response_delete.cpp\
 			response_redirection.cpp\
 			response_cgi.cpp\
 			response.cpp\

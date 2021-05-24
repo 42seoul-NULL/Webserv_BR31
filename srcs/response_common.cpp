@@ -21,6 +21,12 @@ void	Response::makeResponse()
 		makeGetResponse();
 	else if (this->client->getRequest().getMethod() == "PUT")
 		makePutResponse();
+	else if (this->client->getRequest().getMethod() == "HEAD")
+		makeHeadResponse();
+	else if (this->client->getRequest().getMethod() == "OPTIONS")
+		makeOptionsResponse();
+	else if (this->client->getRequest().getMethod() == "DELETE")
+		makeDeleteResponse();
 }
 
 
@@ -54,7 +60,7 @@ void	Response::makeErrorResponse(int error)
 
 				fstat(fd, &sb);
 				addContentLength(sb.st_size);
-				this->raw_response += "\r\n";
+				addEmptyline();
 				setResource(fd, FD_TO_RAW_DATA, MAKE_ERROR_RESPONSE, error); // 이녀석이 알아서 자기 상태까지 변환해줌.
 				return ;
 			}
@@ -123,7 +129,7 @@ int		Response::addAllow()
 		if (this->client->getRequest().getMethod() == *iter)
 			ret = 200;
 	}
-	this->raw_response += "\r\n";
+	addEmptyline();
 	return (ret);
 }
 
@@ -249,7 +255,13 @@ void	Response::addRawErrorBody(int error)
 	std::string temp;
 	makeDefaultErrorBody(temp, error);
 	addContentLength(temp.size());
-	this->raw_response += "\r\n";
+	addEmptyline();
 	this->raw_response += temp;
 	this->client->setStatus(RESPONSE_MAKE_DONE);
+}
+
+
+void	Response::addEmptyline()
+{
+	this->raw_response += "\r\n";
 }

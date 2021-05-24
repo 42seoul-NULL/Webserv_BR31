@@ -1,8 +1,6 @@
 #include "webserv.hpp"
 
-void		Response::makeGetResponse()
-{
-    //REQUEST_RECEIVING,
+ //REQUEST_RECEIVING,
 	//RESPONSE_MAKING,
 	//FILE_READING,
 	//FILE_READ_DONE,
@@ -10,6 +8,8 @@ void		Response::makeGetResponse()
 	//FILE_WRITE_DONE,
 	//RESPONSE_MAKE_DONE
 
+void		Response::makeHeadResponse()
+{
     switch (this->client->getStatus())
     {
     case RESPONSE_MAKING:
@@ -31,14 +31,14 @@ void		Response::makeGetResponse()
 
             bool is_exist = false;
             std::string temp_path;
-            for (std::list<std::string>::iterator iter = this->location->getIndex().begin(); iter != this->location->getIndex().end(); iter++) // index 페이지 중 일치하는거 있는지!
+            for (std::list<std::string>::iterator iter = this->location->getIndex().begin(); iter != this->location->getIndex().end(); iter++)
             {
                 temp_path = (this->resource_path + (*iter));
                 is_exist = isExist(temp_path);
                 if ( is_exist == true )
                     break ;
             }
-            if (is_exist == false && this->location->getAutoIndex()) // index 페이지에 없고, 오토인덱스 on 이면
+            if (is_exist == false && this->location->getAutoIndex())
                 return (makeAutoIndexPage());
             this->resource_path = temp_path;
         }
@@ -62,56 +62,9 @@ void		Response::makeGetResponse()
         }
         addContentLength((int)sb.st_size);
         addEmptyline();
-
-        setResource(fd, FD_TO_RAW_DATA, MAKE_RESPONSE);
-        return ;
-        break;
-    }
-    case FILE_READ_DONE:
-    {
         this->client->setStatus(RESPONSE_MAKE_DONE);
-        break ;
-    }
+	}
     default:
         break;
     }
-}
-
-void		Response::makeAutoIndexPage()
-{
-	this->raw_response.clear();
-	std::string body;
-	std::string pre_addr = "http://" + this->client->getRequest().getHeaders()[HOST] + "/";
-
-	body += "<!DOCTYPE html>";
-	body += "<html>";
-	body += "<head>";
-	body += "</head>";
-	body += "<body>";
-	body += "<h1> AutoIndex : "+ this->client->getRequest().getUri() +"</h1>";
-
-	DIR *dir = NULL;
-	struct dirent *file = NULL;
-	if ( (dir = opendir(this->resource_path.c_str())) == NULL )
-		return (makeErrorResponse(500));
-	while ( (file = readdir(dir)) != NULL )
-	{
-		std::string file_name(file->d_name);
-		if (file_name != "." && file_name != "..")
-			body += "<a href=\"" + pre_addr + file_name + "\">" + file_name + "</a><br>";
-	}
-	closedir(dir);
-
-	body += "";
-	body += "";
-	body += "</body>";
-	body += "</html>";
-
-	addFirstLine(200);
-	addDate();
-	this->raw_response += "Content-Type: " + Config::getInstance()->getMimeType()[".html"] + "\r\n";
-	this->raw_response += "Content-Length: " + ft_itoa(body.size()) + "\r\n";
-	addEmptyline();
-	this->raw_response += body;
-    this->client->setStatus(RESPONSE_MAKE_DONE);
 }
