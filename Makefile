@@ -11,6 +11,7 @@ SRCNAME	=	client.cpp\
 			response_get.cpp\
 			response_put.cpp\
 			response_redirection.cpp\
+			response_cgi.cpp\
 			response.cpp\
 			server.cpp\
 
@@ -38,11 +39,6 @@ fclean : clean
 	rm -rf $(NAME) testlog
 
 re : fclean all
-
-test : $(SRCS)
-	$(CC) $(DCFLAGS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)
-	./webserv tests/test1_tester/test1_tester.config
-
 
 dbg : $(SRCS)
 	$(CC) $(DCFLAGS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)

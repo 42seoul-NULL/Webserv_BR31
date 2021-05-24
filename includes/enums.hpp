@@ -12,6 +12,7 @@
 # define CONTENT_LANGUAGE "Content_Language"
 # define CONTENT_LOCATION "Content-Location"
 # define CONTENT_TYPE "Content-Type"
+# define CONTENT_LENGTH "Content-Length"
 # define AUTHORIZATION "Authorization"
 # define WWW_AUTHENTICATE "WWW-Authenticate"
 # define HOST "Host"
@@ -36,19 +37,13 @@ typedef enum			t_client_status
 	RESPONSE_MAKE_DONE
 }						e_client_status;
 
-typedef enum			t_request_try_make_request_return
+typedef enum			t_request_status
 {
-	READY_TO_MAKE_RESPONSE,
-	WAITING_REQUEST_MSG,
-	I_MAKE_ERROR_RESPONSE
-}						e_request_try_make_request_return;
-
-typedef enum			t_body_length_info
-{
-	NOTHING,
-	CONTENT_LENGTH,
-	CHUNKED
-}						e_body_length_info;
+	HEADER_PARING,
+	LENGTH_BODY_RECEIVING,
+	CHUNKED_LENGTH_RECEIVING,
+	CHUNKED_BODY_RECEVING
+}						e_request_status;
 
 typedef enum			t_fd_type
 {

@@ -1,0 +1,156 @@
+Server default_server(127.0.0.1:8080) started
+[32mserver connection called [0m
+connected client : 5
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[User-Agent] value = [Go-http-client/1.1]
+
+
+Resource insert into reads
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Content-Type] value = [test/file]
+[Host] value = [localhost:8080]
+[Transfer-Encoding] value = [chunked]
+[User-Agent] value = [Go-http-client/1.1]
+
+client 5 response done
+
+[Host] value = [localhost:8080]
+[User-Agent] value = [Go-http-client/1.1]
+
+client 5 response done
+disconnected : 5 in Server
+[32mserver connection called [0m
+connected client : 5
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[User-Agent] value = [Go-http-client/1.1]
+
+
+Resource insert into reads
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[User-Agent] value = [Go-http-client/1.1]
+
+
+Resource insert into reads
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[User-Agent] value = [Go-http-client/1.1]
+
+
+Resource insert into writes
+
+Resource insert into reads
+cgi output file read done
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[User-Agent] value = [Go-http-client/1.1]
+
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[User-Agent] value = [Go-http-client/1.1]
+
+
+Resource insert into reads
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[User-Agent] value = [Go-http-client/1.1]
+
+
+Resource insert into reads
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[User-Agent] value = [Go-http-client/1.1]
+
+
+Resource insert into reads
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[User-Agent] value = [Go-http-client/1.1]
+
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[User-Agent] value = [Go-http-client/1.1]
+
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[User-Agent] value = [Go-http-client/1.1]
+
+
+Resource insert into reads
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[Transfer-Encoding] value = [chunked]
+[User-Agent] value = [Go-http-client/1.1]
+
+
+Resource insert into writes
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Host] value = [localhost:8080]
+[Transfer-Encoding] value = [chunked]
+[User-Agent] value = [Go-http-client/1.1]
+
+
+Resource insert into writes
+client 5 response done
+
+[Accept-Encoding] value = [gzip]
+[Content-Type] value = [test/file]
+[Host] value = [localhost:8080]
+[Transfer-Encoding] value = [chunked]
+[User-Agent] value = [Go-http-client/1.1]
+
+
+Resource insert into writes
+
+Resource insert into reads
+[32mserver connection called [0m
+connected client : 9
+
+[Accept] value = [*/*]
+[Accept-Encoding] value = [gzip, deflate, br]
+[Cache-Control] value = [no-cache]
+[Connection] value = [keep-alive]
+[Content-Length] value = [100000000]
+[Content-Transfer-Encoding] value = [chunked]
+[Content-Type] value = [text/plain]
+[Host] value = [localhost:8080]
+[Postman-Token] value = [b9d7af16-0734-4d45-b110-45507a2ad050]
+[User-Agent] value = [PostmanRuntime/7.28.0]
+
+
+Resource insert into writes
+
+Resource insert into reads
+cgi output file read done
+client 5 response done
+cgi output file read done
+client 9 response done
+disconnected : 5 in Server
