@@ -136,6 +136,7 @@ void	Response::makeCgiResponse()
 			size_t first_line_idx2 = this->raw_response.find("\r\n", first_line_idx1);
 
 			first_line = "HTTP/1.1 " + this->raw_response.substr(first_line_idx1, first_line_idx2 - first_line_idx1) + "\r\n"; 
+
 			// add date//
 			time_t t;
 			char buffer[4096];
@@ -148,7 +149,6 @@ void	Response::makeCgiResponse()
 			// add date //
 			first_line += "Content-Language: ko\r\n";
 			
-
 
 			int content_size = this->raw_response.substr(this->raw_response.find("\r\n\r\n") + 4).size();
 

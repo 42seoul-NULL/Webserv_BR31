@@ -36,19 +36,19 @@ bool			Request::tryMakeRequest(void)
 			makeStartLine();
 			makeRequestHeader(); // 헤더까지 모두 만든다.
 			//헤더를 만들고 난 직후이므로,
-			if (this->headers.count(CONTENT_LENGTH) == 1) // content length 필드가 있다 -> 컨텐츠바디리시빙
+			if ((this->headers.count(TRANSFER_ENCODING) == 1) && (this->headers[TRANSFER_ENCODING] == "chunked")) // content length 필드가 있다 -> 컨텐츠바디리시빙
+			{
+				// remain_body 를 잴수 있을지 없을지 모른다.
+				this->status = CHUNKED_LENGTH_RECEIVING;
+				return (tryMakeRequest());
+			}
+			else if (this->headers.count(CONTENT_LENGTH) == 1)
 			{
 				this->remain_body_value = ft_atoi(headers[CONTENT_LENGTH]);
 				if (this->remain_body_value == 0)
 					return (requestValidCheck(true));
 				this->status = LENGTH_BODY_RECEIVING;
 				return (tryMakeRequest()); // length_body 로 재귀
-			}
-			else if (this->headers.count(TRANSFER_ENCODING) == 1 && this->headers[TRANSFER_ENCODING] == "chunked")
-			{
-				// remain_body 를 잴수 있을지 없을지 모른다.
-				this->status = CHUNKED_LENGTH_RECEIVING;
-				return (tryMakeRequest());
 			}
 			else
 				return (requestValidCheck(true)); // 바디가 없다는 뜻이니까
@@ -83,6 +83,7 @@ bool			Request::tryMakeRequest(void)
 		{
 			//std::cout << "idx : "<< idx << std::endl;
 			this->remain_body_value = ft_atoi_hex(this->raw_request.substr(0, idx)) + 2; // 실제 데이터 뒤에 있는 \r\n 까지.
+			std::cout << "chunked size : " << this->remain_body_value << std::endl;
 			this->raw_request = this->raw_request.substr(idx + 2); // "\r\n" 까지 모조리 없애준다.
 			this->status = CHUNKED_BODY_RECEVING;
 			//std::cout << "true :" << (this->raw_request == "\r\n") << std::endl;
@@ -101,11 +102,13 @@ bool			Request::tryMakeRequest(void)
 		{
 			std::string temp_raw_request = this->raw_request.substr(0, this->remain_body_value - 2); // 뒤에있는 \r\n 제외하고 끊어내준다.
 			this->raw_body += temp_raw_request;
+
 			this->raw_request = this->raw_request.substr(this->remain_body_value); // 뒤에있는 \r\n 까지 끊어준다.
 			this->remain_body_value = 0;
 			if (temp_raw_request.size() == 0) // 0 chunked 였다.
 				return (requestValidCheck(true));
 			this->status = CHUNKED_LENGTH_RECEIVING;
+			return (tryMakeRequest());
 		}
 		break ;
 	}
@@ -251,11 +254,10 @@ void	Request::makeRequestHeader(void)
 	}
 
 	//맵 출력용
-	std::cout << std::endl;	
+	std::cout << this->method << " " << this->uri << " " << http_version << std::endl;
 	for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
 		std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
 	std::cout << std::endl;	
-
 
 	this->raw_request = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
 }
