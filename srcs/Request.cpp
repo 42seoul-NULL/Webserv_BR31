@@ -82,7 +82,6 @@ bool			Request::tryMakeRequest(void)
 		else // 헤더있는줄
 		{
 			this->remain_body_value = ft_atoi_hex(this->raw_request.substr(0, idx)) + 2; // 실제 데이터 뒤에 있는 \r\n 까지.
-			std::cout << "chunked size : " << this->remain_body_value << std::endl;
 			this->raw_request = this->raw_request.substr(idx + 2); // "\r\n" 까지 모조리 없애준다.
 			this->status = CHUNKED_BODY_RECEVING;
 			return (tryMakeRequest());
@@ -246,10 +245,10 @@ void	Request::makeRequestHeader(void)
 	}
 
 	//맵 출력용
-	std::cout << this->method << " " << this->uri << " " << http_version << std::endl;
-	for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
-		std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
-	std::cout << std::endl;	
+	// std::cout << this->method << " " << this->uri << " " << http_version << std::endl;
+	// for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
+	// 	std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
+	// std::cout << std::endl;
 
 	this->raw_request = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
 }
@@ -262,7 +261,7 @@ bool	Request::isValidAuthHeader(Location &loc)
 		ft_memset(result, 0, 200);
 
 		if (this->headers.find(AUTHORIZATION) == this->headers.end())  // auth key 헤더가 아예 안들어왔다.
-		{		
+		{
 			return (false);
 		}
 		else
@@ -301,6 +300,7 @@ bool	Request::requestValidCheck(bool isComplete)
 		return (false);
 	else
 	{
+		
 		Location &loc = this->client->getServer()->getPerfectLocation(this->uri);
 		//set response location
 		this->client->getResponse().setLocation(&loc);
