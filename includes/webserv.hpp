@@ -313,6 +313,7 @@ class Response
 		int		addServer();
 		int		addWWWAuthenticate();
 		void	addRawErrorBody(int error);
+		void	addEmptyline();
 
 		//response_cgi
 		void	makeCgiResponse();
@@ -328,6 +329,17 @@ class Response
 		// int		createPutRequest();
 		void		makePutResponse();
 		int			mkdirResourcePath();
+
+		//response_head
+		void		makeHeadResponse();
+
+		//response_option
+		void		makeOptionsResponse();
+
+		//response_delete
+		void		makeDeleteResponse();
+
+
 
 		// char	**makeEnv();
 };
