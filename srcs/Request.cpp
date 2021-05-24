@@ -81,31 +81,23 @@ bool			Request::tryMakeRequest(void)
 			return (requestValidCheck(false)); //
 		else // 헤더있는줄
 		{
-			//std::cout << "idx : "<< idx << std::endl;
 			this->remain_body_value = ft_atoi_hex(this->raw_request.substr(0, idx)) + 2; // 실제 데이터 뒤에 있는 \r\n 까지.
 			std::cout << "chunked size : " << this->remain_body_value << std::endl;
 			this->raw_request = this->raw_request.substr(idx + 2); // "\r\n" 까지 모조리 없애준다.
 			this->status = CHUNKED_BODY_RECEVING;
-			//std::cout << "true :" << (this->raw_request == "\r\n") << std::endl;
 			return (tryMakeRequest());
 		}
 		break ;
 	}
 	case CHUNKED_BODY_RECEVING:
 	{
-		//std::cout << std::endl;
-		//std::cout << "remain_body : " << this->remain_body_value << std::endl;
-		//std::cout << "raw_request : " << this->raw_request << std::endl;
-		//std::cout << (this->raw_request == "\r\n") << std::endl;
-		//std::cout << "raw_request_size : " << this->raw_request.size() << std::endl;
 		if (this->remain_body_value <= this->raw_request.size()) // 충분히 잘라낼만큼 있다. // (뒤에있는 \r\n 까지)
 		{
-			std::string temp_raw_request = this->raw_request.substr(0, this->remain_body_value - 2); // 뒤에있는 \r\n 제외하고 끊어내준다.
-			this->raw_body += temp_raw_request;
-
+			size_t temp_size = this->raw_body.size();
+			this->raw_body += this->raw_request.substr(0, this->remain_body_value - 2); // 뒤에있는 \r\n 제외하고 끊어내준다.
 			this->raw_request = this->raw_request.substr(this->remain_body_value); // 뒤에있는 \r\n 까지 끊어준다.
 			this->remain_body_value = 0;
-			if (temp_raw_request.size() == 0) // 0 chunked 였다.
+			if (this->raw_body.size() == temp_size) // 0 chunked 였다.
 				return (requestValidCheck(true));
 			this->status = CHUNKED_LENGTH_RECEIVING;
 			return (tryMakeRequest());

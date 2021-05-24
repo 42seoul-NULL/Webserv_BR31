@@ -20,6 +20,12 @@ std::string&	Response::getRawResponse(void)
 {
 	return (this->raw_response);
 }
+
+size_t			Response::getWriteIndex()
+{
+	return (this->write_index);
+}
+
 /////// setter ///////
 void	Response::setLocation(Location *location)
 {
@@ -46,3 +52,7 @@ void	Response::setIsRedirection(bool is_redirection)
 	this->is_redirection = is_redirection;
 }
 
+void	Response::setWriteIndex(size_t index)
+{
+	this->write_index = index;
+}
