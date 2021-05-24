@@ -49,13 +49,13 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 		Resource *res = dynamic_cast<Resource *>(fdmanager);
 		if (res->isFdToRawData()) // read해서 어딘가의 client 의 raw 에 적어야한다.
 		{
-			std::cout << "Resource insert into reads" << std::endl;
+			std::cout << std::endl << "Resource insert into reads" << std::endl;
 			FT_FD_SET(fd, &(this->reads));
 			FT_FD_SET(fd, &(this->errors));
 		}
 		else if (res->isRawDataToFd()) // 어딘가의 client 의 raw에서 읽어서 fd에 write 해야 한다.
 		{
-			std::cout << "Resource insert into writes" << std::endl;
+			std::cout << std::endl << "Resource insert into writes" << std::endl;
 			FT_FD_SET(fd, &(this->writes));
 			FT_FD_SET(fd, &(this->errors));
 		}
@@ -178,7 +178,10 @@ bool	Nginx::run()
 				}
 			}
 			else if (isIndexOfErrorFdSet(i, cpy_errors))
+			{
+				std::cout << "error socket : " << i << " deleted" << std::endl;
 				deleteFromFdPool(this->fd_pool[i]);
+			}
 		}
 	}
 	return (true);
@@ -216,7 +219,7 @@ void	Nginx::doReadServerFd(int i)
 	struct sockaddr_in  client_addr;
 	socklen_t			addr_size = sizeof(client_addr);
 
-	std::cout << "\033[32m server connection called \033[0m" << std::endl;
+	std::cout << "\033[32mserver connection called \033[0m" << std::endl;
 	int client_socket = accept(i, (struct sockaddr*)&client_addr, &addr_size);
 
 	Client* temp_client = new Client(server, client_socket);
@@ -228,7 +231,7 @@ void	Nginx::doReadServerFd(int i)
 
 void	Nginx::doReadClientFD(int i)
 {
-	std::cout << "\033[34m client socket read called \033[0m" << std::endl;
+	//std::cout << "\033[34mclient socket read called \033[0m" << std::endl;
 
 	Client *client = dynamic_cast<Client *>(this->fd_pool[i]);
 	int		len;
@@ -245,10 +248,10 @@ void	Nginx::doReadClientFD(int i)
 	{
 		buf[len] = 0;
 		client->getRequest().getRawRequest() += buf; // 무조건 더한다. (다음 리퀘스트가 미리 와있을 수 있다.)
-		std::cout << buf;
-		///////////////////////////////
+		//std::cout << buf; ///////////////////////////////
+		
 		//추후에 추가되어야 할 부분입니다. (makeResponse 와 tryMakeRequest 가 대폭 수정 될 예정)
-	 	if ((client->getStatus() == REQUEST_RECEIVING) && (client->getRequest().tryMakeRequest() == READY_TO_MAKE_RESPONSE))
+	 	if ((client->getStatus() == REQUEST_RECEIVING) && (client->getRequest().tryMakeRequest() == true))
 		{
 			client->setStatus(RESPONSE_MAKING);
 	 		client->getResponse().makeResponse();
@@ -267,11 +270,14 @@ void	Nginx::doReadResourceFD(int i)
 	case READY:
 	{
 		len = read(resource->getFd(), buf, BUFFER_SIZE);
+
 		buf[len] = 0;
 		resource->getRawData() += buf;
 		if (len < BUFFER_SIZE) // 다읽었다.
 		{
 			resource->doNext();
+			if (resource->getPid() != -1)
+				unlink(resource->getUnlinkPath().c_str());
 			deleteFromFdPool(resource);
 		}
 		break ;
@@ -297,10 +303,24 @@ void	Nginx::doWriteClientFD(int i)
 
 	if (client->getStatus() == RESPONSE_MAKE_DONE)
 	{
-		std::cout << std::endl; /////////////////////////////////////
-		std::cout << client->getResponse().getRawResponse() << std::endl; //////////////////////////////
+		//std::cout << "\033[32mclient write called \033[0m" << std::endl;
 
-		if (client->getResponse().getRawResponse().size() > BUFFER_SIZE)
+		//std::cout << std::endl; /////////////////////////////////////
+		//std::cout << client->getResponse().getRawResponse() << std::endl; //////////////////////////////
+
+
+		// write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().size());
+		// std::cout << "client " << i << " response done" << std::endl;
+		// if (client->getResponse().getIsDisconnectImmediately())
+		// 	deleteFromFdPool(client);
+		// else
+		// {
+		// 	client->getRequest().initRequest();
+		// 	client->getResponse().initResponse();
+		// 	client->setStatus(REQUEST_RECEIVING);
+		// }
+
+		if (client->getResponse().getRawResponse().size() > BUFFER_SIZE) // 써야될 사이즈가 버퍼사이즈보다 크다면 
 		{
 			write(i, client->getResponse().getRawResponse().c_str(), BUFFER_SIZE);
 			client->getResponse().getRawResponse() = client->getResponse().getRawResponse().substr(BUFFER_SIZE);
@@ -308,6 +328,8 @@ void	Nginx::doWriteClientFD(int i)
 		else
 		{
 			write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().size());
+
+			std::cout << "client " << i << " response done" << std::endl;
 
 			if (client->getResponse().getIsDisconnectImmediately())
 				deleteFromFdPool(client);
@@ -324,15 +346,16 @@ void	Nginx::doWriteClientFD(int i)
 void    Nginx::doWriteResourceFD(int i)
 {
     Resource *res = dynamic_cast<Resource *>(this->fd_pool[i]);
-    if (res->getRawData().size() < BUFFER_SIZE)
+
+    if (res->getRawData().size() <= BUFFER_SIZE) // 써야될 사이즈가 버퍼사이즈보다 작거나 같다면 (다써진다)
     {
         write(res->getFd(), res->getRawData().c_str(), res->getRawData().size());
         res->doNext();
         deleteFromFdPool(res);
     }
-    else
+    else // 여기는다 안써진다.
     {
-        write(res->getFd(), res->getRawData().c_str(), BUFFER_SIZE);
-        res->getRawData() = res->getRawData().substr(BUFFER_SIZE);
+		if (write(res->getFd(), res->getRawData().c_str(), BUFFER_SIZE) != -1)
+    	 	res->getRawData() = res->getRawData().substr(BUFFER_SIZE);
     }
 }
