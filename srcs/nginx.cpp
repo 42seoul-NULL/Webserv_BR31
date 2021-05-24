@@ -304,27 +304,19 @@ void	Nginx::doWriteClientFD(int i)
 	{
 		size_t len;
 
-		if (client->getResponse().getRawResponse().size() > BUFFER_SIZE) // 써야될 사이즈가 버퍼사이즈보다 크다면 
-		{
-			len = write(i, client->getResponse().getRawResponse().c_str(), BUFFER_SIZE);
+		len = write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().size());
+		if (len < client->getResponse().getRawResponse().size()) // 다 안쓰였다.
 			client->getResponse().getRawResponse() = client->getResponse().getRawResponse().substr(len);
-		}
-		else
+		else // 다쓰였다.
 		{
-			len = write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().size());
-			if (len < client->getResponse().getRawResponse().size())
-				client->getResponse().getRawResponse() = client->getResponse().getRawResponse().substr(len);
+			if (client->getResponse().getIsDisconnectImmediately())
+				deleteFromFdPool(client);
 			else
 			{
-				if (client->getResponse().getIsDisconnectImmediately())
-					deleteFromFdPool(client);
-				else
-				{
-					std::cout << "Response socket : " << i << " done" << std::endl;
-					client->getRequest().initRequest();
-					client->getResponse().initResponse();
-					client->setStatus(REQUEST_RECEIVING);
-				}
+				std::cout << "Response socket : " << i << " done" << std::endl;
+				client->getRequest().initRequest();
+				client->getResponse().initResponse();
+				client->setStatus(REQUEST_RECEIVING);
 			}
 		}
 	}
@@ -335,22 +327,12 @@ void    Nginx::doWriteResourceFD(int i)
     Resource *res = dynamic_cast<Resource *>(this->fd_pool[i]);
 	size_t len;
 
-    if (res->getRawData().size() <= BUFFER_SIZE) // 써야될 사이즈가 버퍼사이즈보다 작거나 같다면 (다써진다)
-    {
-		len = write(res->getFd(), res->getRawData().c_str(), res->getRawData().size());
-		if (len < res->getRawData().size())
-		{
-			res->getRawData() = res->getRawData().substr(len);
-		}
-		else
-		{
-        	res->doNext();
-        	deleteFromFdPool(res);
-		}
-    }
-    else // 여기는다 안써진다.
-    {
-		len = write(res->getFd(), res->getRawData().c_str(), BUFFER_SIZE);
-    	res->getRawData() = res->getRawData().substr(len);
-    }
+	len = write(res->getFd(), res->getRawData().c_str(), res->getRawData().size());
+	if (len < res->getRawData().size())
+		res->getRawData() = res->getRawData().substr(len);
+	else
+	{
+        res->doNext();
+        deleteFromFdPool(res);
+	}
 }

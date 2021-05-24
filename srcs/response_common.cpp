@@ -17,7 +17,7 @@ void	Response::makeResponse()
 	if (is_redirection)
 		return (makeRedirectionResponse());
 
-	if (this->client->getRequest().getMethod() == "GET")
+	if (this->client->getRequest().getMethod() == "GET" || this->client->getRequest().getMethod() == "POST")
 		makeGetResponse();
 	else if (this->client->getRequest().getMethod() == "PUT")
 		makePutResponse();
