@@ -11,13 +11,12 @@
 # include <iostream>
 # include <arpa/inet.h>
 # include <sys/socket.h>
-# include <sys/time.h>
+# include <ctime>
 # include <sys/select.h>
 # include <errno.h>
 # include <sys/stat.h>
 # include <dirent.h>
 # include <signal.h>
-
 //error
 #include <string.h>
 #include <errno.h>
@@ -414,7 +413,7 @@ class Nginx
 		void	deleteFromFdPool(Fdmanager * fdmanager);
 		void 	insertToFdpool(Fdmanager *fdmanager);
 		void	cleanUp();
-		
+
 	private :
 		// run()'s
 		bool	isIndexOfReadFdSet(int index, fd_set &reads);

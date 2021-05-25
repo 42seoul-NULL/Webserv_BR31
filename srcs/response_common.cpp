@@ -197,16 +197,13 @@ int		Response::addContentType(const std::string &extension)
 
 int		Response::addDate()
 {
-	// Date 함수 살펴 본 후 작성하자.
-	// 메시지가 만들어진 날짜, 객체 생성 시의 시간? 보내기 전 Raw화 하기전의 시간?
-	// juyang 의 유산
 	time_t t;
-	char buffer[4096];
+	char buffer[256];
 	struct tm* timeinfo;
 
 	t = time(NULL);
-	timeinfo = localtime(&t);
-	strftime(buffer, 4096, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+	timeinfo = gmtime(&t);
+	strftime(buffer, 256, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
 	this->raw_response += "Date: " + std::string(buffer) + "\r\n";
 	return (200);
 }
