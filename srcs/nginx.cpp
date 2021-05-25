@@ -268,8 +268,10 @@ void	Nginx::doReadClientFD(int i)
 
 	client->setLastRequestMs(ft_get_time());
 	len = read(i, buf, BUFFER_SIZE);
-	if (len <= 0)
+	if (len == 0)
 		deleteFromFdPool(client);
+	else if (len == -1)
+		return ;
 	else
 	{
 		buf[len] = 0;
@@ -295,7 +297,8 @@ void	Nginx::doReadResourceFD(int i)
 	case READY:
 	{
 		len = read(resource->getFd(), buf, BUFFER_SIZE);
-
+		if (len == -1)
+			return ;
 		buf[len] = 0;
 		resource->getRawData() += buf;
 		if (len < BUFFER_SIZE) // 다읽었다.
@@ -328,12 +331,14 @@ void	Nginx::doWriteClientFD(int i)
 
 	if (client->getStatus() == RESPONSE_MAKE_DONE)
 	{
-		size_t len;
+		int len;
 		size_t w_idx = client->getResponse().getWriteIndex();
 		const char *current_str = client->getResponse().getRawResponse().c_str() + w_idx;
 
 		len = write(i, current_str, client->getResponse().getRawResponse().size() - w_idx);
-		if (len < client->getResponse().getRawResponse().size() - w_idx) // 다 안쓰였다.
+		if (len < 0)
+			return ;
+		if ((size_t) len < client->getResponse().getRawResponse().size() - w_idx) // 다 안쓰였다.
 			client->getResponse().setWriteIndex( w_idx + len );
 		else // 다쓰였다.
 		{
@@ -352,16 +357,15 @@ void	Nginx::doWriteClientFD(int i)
 void    Nginx::doWriteResourceFD(int i)
 {
     Resource *res = dynamic_cast<Resource *>(this->fd_pool[i]);
-	size_t len;
+	int len;
 
 	size_t w_idx = res->getWriteIndex();
 	const char *current_str = (res->getRawData().c_str() + w_idx);
 
-	if (res->getRawData().size() < w_idx)
-		std::cout << "*************************************** overflow ******************************" << std::endl;
-
 	len = write(res->getFd(), current_str, (res->getRawData().size() - w_idx));
-	if (len < (res->getRawData().size() - w_idx))
+	if (len < 0)
+		return ;
+	if ((size_t)len < (res->getRawData().size() - w_idx))
 		res->setWriteIndex( w_idx + len );
 	else
 	{
