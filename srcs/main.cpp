@@ -20,7 +20,7 @@ int	main(int ac, char **av)
 
 	Nginx nginx;
 	Config::getInstance()->setNginx(&nginx);
-	nginx.setConnectionTimeOut(3000);
+	nginx.setConnectionTimeOut(3000000);
 
 	try
 	{
