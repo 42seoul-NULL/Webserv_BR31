@@ -37,7 +37,7 @@ void	Nginx::deleteFromFdPool(Fdmanager * fdmanager)
 	FT_FD_CLR(fdmanager->getFd(), &(this->reads));
 	FT_FD_CLR(fdmanager->getFd(), &(this->writes));
 	FT_FD_CLR(fdmanager->getFd(), &(this->errors));
-	
+
 	if (fdmanager->getType() == FD_RESOURCE)
 	{
 		Resource *res = dynamic_cast<Resource *>(fdmanager);
@@ -86,7 +86,7 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 	{
 	case FD_CLIENT:
 	{
-		std::cout << "Client >> socket connection fd : " << fd << std::endl; 
+		std::cout << "Client >> socket connection fd : " << fd << std::endl;
 
 		fcntl(fd, F_SETFL, O_NONBLOCK);
 		FT_FD_SET(fd, &(this->reads));
@@ -123,38 +123,21 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 
 bool	Nginx::initServers()
 {
-	for (std::map<std::string, Server>::iterator iter = Config::getInstance()->getServers().begin(); iter != Config::getInstance()->getServers().end(); iter++)
+	for (serverMap::iterator server_iter = Config::getInstance()->getServerBlocks().begin(); server_iter != Config::getInstance()->getServerBlocks().end(); server_iter++)
 	{
-		struct sockaddr_in  server_addr;
-		iter->second.setFd(socket(PF_INET, SOCK_STREAM, 0));
-		int option = 1;
-		setsockopt(iter->second.getFd(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
+		turnOnServerFD(server_iter);
+		putServerFdIntoFdPool(server_iter);
+		// FT_FD_SET(server_iter->second.getFd(), &(this->reads));
+		// FT_FD_SET(server_iter->second.getFd(), &(this->errors));
 
-		ft_memset(&server_addr, 0, sizeof(server_addr));
-		server_addr.sin_family = AF_INET;
-		server_addr.sin_addr.s_addr = inet_addr(iter->second.getIP().c_str());
-		server_addr.sin_port = ft_htons(iter->second.getPort());
+		// this->fd_pool[server_iter->second.getFd()] = &(server_iter->second);
 
-		if (bind(iter->second.getFd(), (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
-		{
-			std::cerr << "bind() error" << std::endl;
-			throw strerror(errno);
-		}
-		if (listen(iter->second.getFd(), CLIENT_QUE_SIZE) == -1)
-			throw strerror(errno);
-
-		std::cout << "Server " << iter->second.getServerName() << "(" << iter->second.getIP() << ":" << iter->second.getPort() << ") started" << std::endl;
-		// 서버소켓은 read 와 error 만 검사.
-		FT_FD_SET(iter->second.getFd(), &(this->reads));
-		FT_FD_SET(iter->second.getFd(), &(this->errors));
-
-		this->fd_pool[iter->second.getFd()] = &(iter->second);
-
-		if (this->fd_max < iter->second.getFd())
-			this->fd_max = iter->second.getFd();
+		// if (this->fd_max < server_iter->second.getFd())
+		// 	this->fd_max = server_iter->second.getFd();
 	}
 	return (true);
 }
+
 
 bool	Nginx::run()
 {
@@ -242,6 +225,40 @@ bool	Nginx::run()
 }
 
 //// private
+// initServer()'s
+void	Nginx::turnOnServerFD(serverMap::iterator server_block)
+{
+	struct sockaddr_in  server_addr;
+		server_block->second.setFd(socket(PF_INET, SOCK_STREAM, 0));
+		int option = 1;
+		setsockopt(server_block->second.getFd(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
+
+		ft_memset(&server_addr, 0, sizeof(server_addr));
+		server_addr.sin_family = AF_INET;
+		server_addr.sin_addr.s_addr = inet_addr(server_block->second.getIP().c_str());
+		server_addr.sin_port = ft_htons(server_block->second.getPort());
+
+		if (bind(server_block->second.getFd(), (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
+		{
+			std::cerr << "bind() error" << std::endl;
+			throw strerror(errno);
+		}
+		if (listen(server_block->second.getFd(), CLIENT_QUE_SIZE) == -1)
+			throw strerror(errno);
+		std::cout << "Server " << server_block->second.getServerName() << "(" << server_block->second.getIP() << ":" << server_block->second.getPort() << ") started" << std::endl;
+}
+
+void	Nginx::putServerFdIntoFdPool(serverMap::iterator server_block)
+{
+	FT_FD_SET(server_block->second.getFd(), &(this->reads));
+	FT_FD_SET(server_block->second.getFd(), &(this->errors));
+
+	this->fd_pool[server_block->second.getFd()] = &(server_block->second);
+
+	if (this->fd_max < server_block->second.getFd())
+		this->fd_max = server_block->second.getFd();
+}
+
 // run()'s
 bool	Nginx::isIndexOfReadFdSet(int index, fd_set &reads)
 {

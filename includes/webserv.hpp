@@ -53,7 +53,7 @@ class Config
 
 		Nginx *nginx;
 
-		std::map<std::string, Server> servers;
+		std::map<std::string, Server> server_blocks;
 		static Config*	instance;
 		std::map<std::string, std::string> mime_type;
 		std::map<std::string, std::string> status_code;
@@ -70,7 +70,7 @@ class Config
 		void	setNginx(Nginx *nginx);
 
 		//getter
-		std::map<std::string, Server>& getServers();
+		std::map<std::string, Server>& getServerBlocks();
 		std::map<std::string, std::string>& getMimeType();
 		std::map<std::string, std::string>& getStatusCode();
 		Nginx	*getNginx();
@@ -402,6 +402,7 @@ class Nginx
 		int		fd_max;
 		std::vector<Fdmanager *> fd_pool;  /// 모든 fd pool (Server, Client, Resource가 담긴다.)
 		size_t	connection_time_out;
+		typedef std::map<std::string, Server> serverMap;
 
 	public	:
 		// 생정자 & 소멸자
@@ -417,6 +418,9 @@ class Nginx
 		void	setConnectionTimeOut(size_t connection_time_out);
 
 	private :
+		// initServer()'s
+		void	turnOnServerFD(serverMap::iterator server_block);
+		void	putServerFdIntoFdPool(serverMap::iterator server_block);
 		// run()'s
 		bool	isIndexOfReadFdSet(int index, fd_set &reads);
 		bool	isIndexOfWriteFdSet(int index, fd_set &writes);
@@ -426,6 +430,7 @@ class Nginx
 		void	doReadResourceFD(int i);
 		void	doWriteClientFD(int i);
 		void	doWriteResourceFD(int i);
+
 
 };
 
