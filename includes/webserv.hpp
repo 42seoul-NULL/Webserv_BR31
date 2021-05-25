@@ -16,6 +16,12 @@
 # include <errno.h>
 # include <sys/stat.h>
 # include <dirent.h>
+# include <signal.h>
+
+//error
+#include <string.h>
+#include <errno.h>
+
 
 # include "libft.hpp"
 # include "enums.hpp"
@@ -35,7 +41,6 @@ class Response;
 class Resource;
 class Location;
 class Server;
-class Nginx;
 
 ///////////////Config////////////////
 class Config
@@ -202,6 +207,7 @@ class Resource	:	public Fdmanager
 		void		setPid(int pid);
 		void		setUnlinkPath(const std::string& unlink_path);
 		void		setWriteIndex(size_t write_index);
+		void		setClient(Client *client);
 
 		//getter
 		int			getPid();
@@ -285,6 +291,7 @@ class Response
 		bool		getIsDisconnectImmediately();
 		std::string&	getRawResponse(void);
 		size_t	getWriteIndex();
+		std::list<Resource *> &getResources();
 		//setter
 		void	setLocation(Location *location);
 		void	setClient(Client *client);
@@ -406,6 +413,8 @@ class Nginx
 		bool	run();
 		void	deleteFromFdPool(Fdmanager * fdmanager);
 		void 	insertToFdpool(Fdmanager *fdmanager);
+
+		void	cleanUp();
 	private :
 		// run()'s
 		bool	isIndexOfReadFdSet(int index, fd_set &reads);

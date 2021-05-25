@@ -2,7 +2,7 @@
 # define ENUMS_HPP
 
 # define BUFFER_SIZE	65536
-# define CLIENT_QUE_SIZE 1000
+# define CLIENT_QUE_SIZE 200
 
 # define NEEDBODY -1
 # define REQUESTCOMPLETE -2
