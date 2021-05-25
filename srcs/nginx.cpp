@@ -27,6 +27,11 @@ void	Nginx::cleanUp()
 	}
 }
 
+void	Nginx::setConnectionTimeOut(size_t connection_time_out)
+{
+	this->connection_time_out = connection_time_out;
+}
+
 void	Nginx::deleteFromFdPool(Fdmanager * fdmanager)
 {
 	FT_FD_CLR(fdmanager->getFd(), &(this->reads));
@@ -358,6 +363,11 @@ void	Nginx::doWriteClientFD(int i)
 {
 	Client *client = dynamic_cast<Client *>(this->fd_pool[i]);
 
+	if ((client->getStatus() == REQUEST_RECEIVING) && ((ft_get_time() - client->getLastRequestMs()) > this->connection_time_out ))
+	{
+		deleteFromFdPool(client);
+		return ;
+	}
 	if (client->getStatus() == RESPONSE_MAKE_DONE)
 	{
 		int len;

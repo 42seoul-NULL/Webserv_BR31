@@ -401,6 +401,7 @@ class Nginx
 
 		int		fd_max;
 		std::vector<Fdmanager *> fd_pool;  /// 모든 fd pool (Server, Client, Resource가 담긴다.)
+		size_t	connection_time_out;
 
 	public	:
 		// 생정자 & 소멸자
@@ -413,6 +414,7 @@ class Nginx
 		void	deleteFromFdPool(Fdmanager * fdmanager);
 		void 	insertToFdpool(Fdmanager *fdmanager);
 		void	cleanUp();
+		void	setConnectionTimeOut(size_t connection_time_out);
 
 	private :
 		// run()'s
