@@ -21,7 +21,7 @@ void	Nginx::cleanUp()
 	{
 		if (*iter != NULL)
 		{
-			std::cout << "fd : " << (*iter)->getType() << ", type : " << (*iter)->getType() << "  >>  deleted" << std::endl;
+			std::cout << "fd : " << (*iter)->getFd() << ", type : " << (*iter)->getType() << "  >>  deleted" << std::endl;
 			deleteFromFdPool(*iter);
 		}
 	}
@@ -53,8 +53,13 @@ void	Nginx::deleteFromFdPool(Fdmanager * fdmanager)
 		if (res->getUnlinkPath() != "") // 혹시나 임시파일이있다면 지워준다.
 			unlink(res->getUnlinkPath().c_str());
 	}
-
 	close(fdmanager->getFd());
+
+	if (fdmanager->getType() == FD_RESOURCE)
+		std::cout << "Resource >> close fd : " << fdmanager->getFd() << std::endl;
+	else if (fdmanager->getType() == FD_CLIENT)
+		std::cout << "Client >> close fd : " << fdmanager->getFd() << std::endl;
+
 	this->fd_pool[fdmanager->getFd()] = NULL;
 	if (this->fd_max == fdmanager->getFd())
 		this->fd_max--;
@@ -67,10 +72,17 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 {
 	int fd = fdmanager->getFd();
 
+	if (this->fd_pool[fd] != NULL)
+	{
+		std::cout << "try to input same fd" << std::endl;
+	}
+
 	switch (fdmanager->getType())
 	{
 	case FD_CLIENT:
 	{
+		std::cout << "Client >> socket connection fd : " << fd << std::endl; 
+
 		fcntl(fd, F_SETFL, O_NONBLOCK);
 		FT_FD_SET(fd, &(this->reads));
 		FT_FD_SET(fd, &(this->writes));
@@ -82,6 +94,7 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 	}
 	case FD_RESOURCE:
 	{
+		fcntl(fd, F_SETFL, O_NONBLOCK);
 		Resource *res = dynamic_cast<Resource *>(fdmanager);
 		if (res->isFdToRawData()) // read해서 어딘가의 client 의 raw 에 적어야한다.
 		{
@@ -162,7 +175,10 @@ bool	Nginx::run()
 		cpy_errors = this->errors;
 
 		if ( (fd_num = select(this->fd_max + 1, &cpy_reads, &cpy_writes, &cpy_errors, &select_timeout)) == -1)
+		{
+			std::cout << "select return -1" << std::endl;
 			throw strerror(errno);
+		}
 
 		if (fd_num == 0) // select_timeout
 			continue ;
@@ -268,18 +284,31 @@ void	Nginx::doReadClientFD(int i)
 
 	client->setLastRequestMs(ft_get_time());
 	len = read(i, buf, BUFFER_SIZE);
-	if (len == 0)
-		deleteFromFdPool(client);
-	else if (len == -1)
-		return ;
+	if (len <= 0)
+	{
+		if (len == 0)
+		{
+			std::cout << "Client : " << i << " read 0 || ";
+			deleteFromFdPool(client);
+		}
+		else
+			std::cout << "Client : " << i << " read minus" << std::endl;
+	}
 	else
 	{
 		buf[len] = 0;
 		client->getRequest().getRawRequest() += buf; // 무조건 더한다. (다음 리퀘스트가 미리 와있을 수 있다.)
-
-		//추후에 추가되어야 할 부분입니다. (makeResponse 와 tryMakeRequest 가 대폭 수정 될 예정)
 	 	if ((client->getStatus() == REQUEST_RECEIVING) && (client->getRequest().tryMakeRequest() == true))
 		{
+			//request 로깅
+			// std::cout << "************************| "<< i << " | "<< "REQUEST ********************************" << std::endl;
+			// std::cout << client->getRequest().getMethod() << " " << client->getRequest().getUri() << " " << client->getRequest().getHttpVersion() << std::endl;
+			// for (std::map<std::string, std::string>::iterator iter = client->getRequest().getHeaders().begin(); iter != client->getRequest().getHeaders().end(); iter++)
+			// 	std::cout << "[" << iter->first << "] value = [" << iter->second << "]" << std::endl;
+			// std::cout << "**************************** REQUEST END **********************************" << std::endl;
+			//
+
+
 			client->setStatus(RESPONSE_MAKING);
 	 		client->getResponse().makeResponse();
 		}
@@ -336,8 +365,10 @@ void	Nginx::doWriteClientFD(int i)
 		const char *current_str = client->getResponse().getRawResponse().c_str() + w_idx;
 
 		len = write(i, current_str, client->getResponse().getRawResponse().size() - w_idx);
+
 		if (len < 0)
 			return ;
+
 		if ((size_t) len < client->getResponse().getRawResponse().size() - w_idx) // 다 안쓰였다.
 			client->getResponse().setWriteIndex( w_idx + len );
 		else // 다쓰였다.
@@ -363,8 +394,10 @@ void    Nginx::doWriteResourceFD(int i)
 	const char *current_str = (res->getRawData().c_str() + w_idx);
 
 	len = write(res->getFd(), current_str, (res->getRawData().size() - w_idx));
+
 	if (len < 0)
 		return ;
+
 	if ((size_t)len < (res->getRawData().size() - w_idx))
 		res->setWriteIndex( w_idx + len );
 	else

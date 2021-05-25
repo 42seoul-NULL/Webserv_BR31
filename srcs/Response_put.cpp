@@ -34,17 +34,19 @@ void		Response::makePutResponse()
 					addFirstLine(201);
 					mkdirResourcePath();
 				}
-				int fd = open(this->resource_path.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0777);
-				if (fd < 0)
+				//int fd_temp = open(this->resource_path.c_str(), O_WRONLY | O_TRUNC, 0666);
+				int fd_temp = open(this->resource_path.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0777);
+
+				if (fd_temp < 0)
 				{
-					close(fd);
 					makeErrorResponse(500);
 					return ;
 				}
+
 				addDate();
-				//addContentLength(0);
+				addContentLength(0);
 				addEmptyline();
-				setResource(fd, RAW_DATA_TO_FD, MAKE_RESPONSE);
+				setResource(fd_temp, RAW_DATA_TO_FD, MAKE_RESPONSE);
 			}
 			break ;
 		}

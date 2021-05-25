@@ -243,13 +243,6 @@ void	Request::makeRequestHeader(void)
 			value = temp.substr(found + 1);
 		headers[key] = value;
 	}
-
-	//맵 출력용
-	// std::cout << this->method << " " << this->uri << " " << http_version << std::endl;
-	// for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
-	// 	std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
-	// std::cout << std::endl;
-
 	this->raw_request = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
 }
 

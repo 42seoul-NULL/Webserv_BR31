@@ -89,7 +89,6 @@ void	Response::makeCgiResponse()
 		std::string temp_file_name = "./temp/tempfile_" + ft_itoa(this->client->getFdRead());
 		int fd_temp = open(temp_file_name.c_str(), O_CREAT | O_TRUNC | O_RDWR, 0666);
 
-
 		if (fd_temp == -1)
 			return (makeErrorResponse(500));
 		int pid = fork();
@@ -127,7 +126,7 @@ void	Response::makeCgiResponse()
 	case FILE_READ_DONE:
 	{
 		close(client->getFdRead());
-		close(client->getFdWrite());
+		//close(client->getFdWrite());
 		try
 		{
 			std::string first_line;

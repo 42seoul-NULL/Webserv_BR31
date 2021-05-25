@@ -11,6 +11,7 @@ void	Response::initResponse(void)
 	this->resources.clear();
 	this->client->setFdRead(-1);
 	this->client->setFdWrite(-1);
+	this->is_disconnect_immediately = false;
 }
 
 void	Response::makeResponse()

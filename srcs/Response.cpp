@@ -9,6 +9,7 @@ Response::Response(void)
 	this->location = NULL;
 	this->write_index = 0;
 	this->resources.clear();
+	this->is_disconnect_immediately = false;
 }
 
 Response::~Response()

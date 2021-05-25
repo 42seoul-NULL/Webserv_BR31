@@ -413,8 +413,8 @@ class Nginx
 		bool	run();
 		void	deleteFromFdPool(Fdmanager * fdmanager);
 		void 	insertToFdpool(Fdmanager *fdmanager);
-
 		void	cleanUp();
+		
 	private :
 		// run()'s
 		bool	isIndexOfReadFdSet(int index, fd_set &reads);
