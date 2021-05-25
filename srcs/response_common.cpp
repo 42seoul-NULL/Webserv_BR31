@@ -9,6 +9,8 @@ void	Response::initResponse(void)
 	this->location = NULL;
 	this->write_index = 0;
 	this->resources.clear();
+	this->client->setFdRead(-1);
+	this->client->setFdWrite(-1);
 }
 
 void	Response::makeResponse()

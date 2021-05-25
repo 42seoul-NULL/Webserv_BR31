@@ -11,8 +11,20 @@ Nginx::Nginx() : fd_max(-1)
 
 Nginx::~Nginx()
 {
-
 	std::cerr << "Nginx Down" << std::endl;
+	cleanUp();
+}
+
+void	Nginx::cleanUp()
+{
+	for (std::vector<Fdmanager *>::iterator iter = this->fd_pool.begin(); iter != this->fd_pool.end(); iter++)
+	{
+		if (*iter != NULL)
+		{
+			std::cout << "fd : " << (*iter)->getType() << ", type : " << (*iter)->getType() << "  >>  deleted" << std::endl;
+			deleteFromFdPool(*iter);
+		}
+	}
 }
 
 void	Nginx::deleteFromFdPool(Fdmanager * fdmanager)
@@ -20,11 +32,34 @@ void	Nginx::deleteFromFdPool(Fdmanager * fdmanager)
 	FT_FD_CLR(fdmanager->getFd(), &(this->reads));
 	FT_FD_CLR(fdmanager->getFd(), &(this->writes));
 	FT_FD_CLR(fdmanager->getFd(), &(this->errors));
+	
+	if (fdmanager->getType() == FD_RESOURCE)
+	{
+		Resource *res = dynamic_cast<Resource *>(fdmanager);
+		if (res->getClient() != NULL) // 클라이언트가 지시한게 아니다. 클라이언트가 가지고 있는 리스트에서 자기 정보 삭제.
+		{
+			std::list<Resource *>&resources = res->getClient()->getResponse().getResources();
+			for (std::list<Resource *>::iterator iter = resources.begin(); iter!= resources.end(); iter++)
+			{
+				if (*iter == res)
+				{
+					resources.erase(iter);
+					break ;
+				}
+			}
+		}
+		if ((res->getPid() != -1)  && (!res->isReady()) ) // 자식이 돌고있다.
+			kill(res->getPid(), SIGINT); // 자식도 죽여준다.
+		if (res->getUnlinkPath() != "") // 혹시나 임시파일이있다면 지워준다.
+			unlink(res->getUnlinkPath().c_str());
+	}
+
 	close(fdmanager->getFd());
 	this->fd_pool[fdmanager->getFd()] = NULL;
 	if (this->fd_max == fdmanager->getFd())
 		this->fd_max--;
-	delete fdmanager;
+	if (fdmanager->getType() != FD_SERVER)
+		delete fdmanager;
 	return ;
 }
 
@@ -296,7 +331,7 @@ void	Nginx::doWriteClientFD(int i)
 		size_t len;
 		size_t w_idx = client->getResponse().getWriteIndex();
 		const char *current_str = client->getResponse().getRawResponse().c_str() + w_idx;
-		
+
 		len = write(i, current_str, client->getResponse().getRawResponse().size() - w_idx);
 		if (len < client->getResponse().getRawResponse().size() - w_idx) // 다 안쓰였다.
 			client->getResponse().setWriteIndex( w_idx + len );
@@ -320,10 +355,13 @@ void    Nginx::doWriteResourceFD(int i)
 	size_t len;
 
 	size_t w_idx = res->getWriteIndex();
-	const char *current_str = res->getRawData().c_str() + w_idx;
+	const char *current_str = (res->getRawData().c_str() + w_idx);
 
-	len = write(res->getFd(), current_str, res->getRawData().size() - w_idx);
-	if (len < res->getRawData().size() - w_idx)
+	if (res->getRawData().size() < w_idx)
+		std::cout << "*************************************** overflow ******************************" << std::endl;
+
+	len = write(res->getFd(), current_str, (res->getRawData().size() - w_idx));
+	if (len < (res->getRawData().size() - w_idx))
 		res->setWriteIndex( w_idx + len );
 	else
 	{

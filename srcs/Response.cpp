@@ -2,18 +2,30 @@
 
 Response::Response(void)
 {
-	initResponse();
+	this->raw_response.clear();
+	this->resource_path.clear();
+	this->is_redirection = false;
+	this->cgi_extention.clear();
+	this->location = NULL;
+	this->write_index = 0;
+	this->resources.clear();
 }
 
 Response::~Response()
 {
-//	std::cout << "response destroyer called" << std::endl;
-
 	for (std::list<Resource *>::iterator iter = this->resources.begin(); iter != this->resources.end(); iter++)
+	{
+		(*iter)->setClient(NULL);
 		Config::getInstance()->getNginx()->deleteFromFdPool(*iter);
+	}
 }
 
 /////// geter ////////
+std::list<Resource *> &Response::getResources()
+{
+	return (this->resources);
+}
+
 bool		Response::getIsDisconnectImmediately()
 {
 	return (this->is_disconnect_immediately);

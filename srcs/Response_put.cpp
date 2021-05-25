@@ -42,7 +42,7 @@ void		Response::makePutResponse()
 					return ;
 				}
 				addDate();
-				addContentLength(0);
+				//addContentLength(0);
 				addEmptyline();
 				setResource(fd, RAW_DATA_TO_FD, MAKE_RESPONSE);
 			}

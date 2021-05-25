@@ -1,1 +1,4 @@
 Server default_server(127.0.0.1:8080) started
+
+>> SIGINT CALLED <<
+fd : 1, type : 1  >>  deleted

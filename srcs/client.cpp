@@ -16,11 +16,16 @@ Client::Client(Server *server, int fd)
 	this->server = server;
 	this->request.setClient(this);
 	this->response.setClient(this);
+	this->fd_read = -1;
+	this->fd_write = -1;
 }
 
 Client::~Client()
 {
-
+	if (fd_read != -1)
+		close(fd_read);
+	if (fd_write != -1)
+		close(fd_write);
 }
 //setter
 void	Client::setLastRequestMs(unsigned long last_request_ms)

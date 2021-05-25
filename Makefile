@@ -63,9 +63,9 @@ TEST1_PORT = 8080
 run : all
 	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config
 test1 : all
-	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config > testlog &
+	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config &> testlog &
 	-./tests/tester_bin/tester http://localhost:$(TEST1_PORT)
-	killall $(NAME)
+	killall -2 $(NAME)
 
 ##############################
 

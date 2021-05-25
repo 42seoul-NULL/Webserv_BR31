@@ -1,5 +1,13 @@
 #include "webserv.hpp"
 
+void sigIntHandler(int sig)
+{
+	sig = 0;
+
+	std::cout << std::endl << ">> SIGINT CALLED <<" << std::endl;
+	Config::getInstance()->getNginx()->cleanUp();
+	exit(0);
+}
 
 int	main(int ac, char **av)
 {
@@ -16,6 +24,7 @@ int	main(int ac, char **av)
 	try
 	{
 		nginx.initServers();
+		signal(SIGINT, sigIntHandler);
 		nginx.run();
 	}
 	catch(const char *e)
