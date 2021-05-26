@@ -59,3 +59,18 @@ unsigned long	Client::getLastRequestMs()
 {
 	return (this->last_request_ms);
 }
+
+void	Client::appendRawRequest(const char *buf)
+{
+	this->request.getRawRequest() += buf;
+}
+
+bool	Client::tryMakeRequest()
+{
+	return (this->request.tryMakeRequest());
+}
+
+void	Client::makeResponse()
+{
+	this->response.makeResponse();
+}
