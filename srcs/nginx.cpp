@@ -1,12 +1,12 @@
 #include "webserv.hpp"
 
 
-Nginx::Nginx() : fd_max(-1)
+Nginx::Nginx()
 {
 	this->fd_pool.resize(1024, NULL);
-	FT_FD_ZERO(&(this->reads));
-	FT_FD_ZERO(&(this->writes));
-	FT_FD_ZERO(&(this->errors));
+	// FT_FD_ZERO(&(this->fd_sets.read_fd_set));
+	// FT_FD_ZERO(&(this->writes.write_fd_set));
+	// FT_FD_ZERO(&(this->errors));
 }
 
 Nginx::~Nginx()
@@ -15,29 +15,36 @@ Nginx::~Nginx()
 	cleanUp();
 }
 
-void	Nginx::cleanUp()
+bool	Nginx::initServers()
 {
-	for (std::vector<Fdmanager *>::iterator iter = this->fd_pool.begin(); iter != this->fd_pool.end(); iter++)
+	for (serverMap::iterator server_iter = Config::getInstance()->getServerBlocks().begin(); server_iter != Config::getInstance()->getServerBlocks().end(); server_iter++)
 	{
-		if (*iter != NULL)
-		{
-			std::cout << "fd : " << (*iter)->getFd() << ", type : " << (*iter)->getType() << "  >>  deleted" << std::endl;
-			deleteFromFdPool(*iter);
-		}
+		turnOnServerFD(server_iter);
+		putServerFdIntoFdPool(server_iter);
 	}
+	return (true);
 }
 
-void	Nginx::setConnectionTimeOut(size_t connection_time_out)
+bool	Nginx::run()
 {
-	this->connection_time_out = connection_time_out;
+	int		ready_fd_num;
+
+	while (1)
+	{
+		Fdsets copy_fd_sets = this->fd_sets;
+
+		ready_fd_num = selectReadyFd(copy_fd_sets);
+		if (ready_fd_num == 0) // select_timeout
+			continue ;
+		workWithReadyFds(copy_fd_sets);
+		usleep(5);
+	}
+	return (true);
 }
 
 void	Nginx::deleteFromFdPool(Fdmanager * fdmanager)
 {
-	FT_FD_CLR(fdmanager->getFd(), &(this->reads));
-	FT_FD_CLR(fdmanager->getFd(), &(this->writes));
-	FT_FD_CLR(fdmanager->getFd(), &(this->errors));
-
+	this->fd_sets.deleteFd(fdmanager->getFd());
 	if (fdmanager->getType() == FD_RESOURCE)
 	{
 		Resource *res = dynamic_cast<Resource *>(fdmanager);
@@ -67,7 +74,7 @@ void	Nginx::deleteFromFdPool(Fdmanager * fdmanager)
 
 	this->fd_pool[fdmanager->getFd()] = NULL;
 	if (this->fd_max == fdmanager->getFd())
-		this->fd_max--;
+		--this->fd_max;
 	if (fdmanager->getType() != FD_SERVER)
 		delete fdmanager;
 	return ;
@@ -89,9 +96,9 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 		std::cout << "Client >> socket connection fd : " << fd << std::endl;
 
 		fcntl(fd, F_SETFL, O_NONBLOCK);
-		FT_FD_SET(fd, &(this->reads));
-		FT_FD_SET(fd, &(this->writes));
-		FT_FD_SET(fd, &(this->errors));
+		this->fd_sets.addToReadSet(fd);
+		this->fd_sets.addToWriteSet(fd);
+		this->fd_sets.addToErrorSet(fd);
 		if (this->fd_max < fd)
 			this->fd_max = fd;
 		this->fd_pool[fd] = fdmanager;
@@ -103,13 +110,13 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 		Resource *res = dynamic_cast<Resource *>(fdmanager);
 		if (res->isFdToRawData()) // read해서 어딘가의 client 의 raw 에 적어야한다.
 		{
-			FT_FD_SET(fd, &(this->reads));
-			FT_FD_SET(fd, &(this->errors));
+			this->fd_sets.addToReadSet(fd);
+			this->fd_sets.addToErrorSet(fd);
 		}
 		else if (res->isRawDataToFd()) // 어딘가의 client 의 raw에서 읽어서 fd에 write 해야 한다.
 		{
-			FT_FD_SET(fd, &(this->writes));
-			FT_FD_SET(fd, &(this->errors));
+			this->fd_sets.addToWriteSet(fd);
+			this->fd_sets.addToErrorSet(fd);
 		}
 		if (this->fd_max < fd)
 			this->fd_max = fd;
@@ -121,107 +128,21 @@ void	Nginx::insertToFdpool(Fdmanager *fdmanager) // 이미 new 가 되어 들어
 	}
 }
 
-bool	Nginx::initServers()
+void	Nginx::cleanUp()
 {
-	for (serverMap::iterator server_iter = Config::getInstance()->getServerBlocks().begin(); server_iter != Config::getInstance()->getServerBlocks().end(); server_iter++)
+	for (std::vector<Fdmanager *>::iterator iter = this->fd_pool.begin(); iter != this->fd_pool.end(); iter++)
 	{
-		turnOnServerFD(server_iter);
-		putServerFdIntoFdPool(server_iter);
-		// FT_FD_SET(server_iter->second.getFd(), &(this->reads));
-		// FT_FD_SET(server_iter->second.getFd(), &(this->errors));
-
-		// this->fd_pool[server_iter->second.getFd()] = &(server_iter->second);
-
-		// if (this->fd_max < server_iter->second.getFd())
-		// 	this->fd_max = server_iter->second.getFd();
+		if (*iter != NULL)
+		{
+			std::cout << "fd : " << (*iter)->getFd() << ", type : " << (*iter)->getType() << "  >>  deleted" << std::endl;
+			deleteFromFdPool(*iter);
+		}
 	}
-	return (true);
 }
 
-
-bool	Nginx::run()
+void	Nginx::setConnectionTimeOut(size_t connection_time_out)
 {
-	fd_set	cpy_reads;
-	fd_set	cpy_writes;
-	fd_set	cpy_errors;
-
-	struct timeval		select_timeout;
-	struct timeval		connection_timeout;
-
-	select_timeout.tv_sec = 5; // last request time out 5000ms
-	select_timeout.tv_usec = 0;
-	connection_timeout.tv_sec = 20; // last request time out 5000ms
-	connection_timeout.tv_usec = 0;
-
-	int		fd_num;
-
-	while (1)
-	{
-		usleep(5); // cpu 점유가 100% 까지 올라가는 것을 막기 위해서
-		cpy_reads = this->reads;
-		cpy_writes = this->writes;
-		cpy_errors = this->errors;
-
-		if ( (fd_num = select(this->fd_max + 1, &cpy_reads, &cpy_writes, &cpy_errors, &select_timeout)) == -1)
-		{
-			std::cout << "select return -1" << std::endl;
-			throw strerror(errno);
-		}
-
-		if (fd_num == 0) // select_timeout
-			continue ;
-
-		for (int i = 0; i <= this->fd_max; i++)
-		{
-			if (isIndexOfReadFdSet(i, cpy_reads))
-			{
-				switch (this->fd_pool[i]->getType())
-				{
-				case FD_SERVER:
-				{
-					doReadServerFd(i);
-					break;
-				}
-				case FD_CLIENT:
-				{
-					doReadClientFD(i);
-					break ;
-				}
-				case FD_RESOURCE:  // read 다 -> 적혀있는 타겟 클라이언트 response 에 적어주면 된다.
-				{
-					doReadResourceFD(i);
-					break ;
-				}
-				default:
-					break;
-				}
-			}
-			else if (isIndexOfWriteFdSet(i, cpy_writes))
-			{
-				switch (this->fd_pool[i]->getType())
-				{
-				case FD_CLIENT:
-				{
-					doWriteClientFD(i);
-					break;
-				}
-				case FD_RESOURCE:
-				{
-					doWriteResourceFD(i);
-					break ;
-				}
-				default:
-					break;
-				}
-			}
-			else if (isIndexOfErrorFdSet(i, cpy_errors))
-			{
-				std::cout << "error socket : " << i << " deleted" << std::endl;
-				deleteFromFdPool(this->fd_pool[i]);
-			}
-		}
-	}
-	return (true);
+	this->connection_time_out = connection_time_out;
 }
 
 //// private
@@ -250,8 +171,10 @@ void	Nginx::turnOnServerFD(serverMap::iterator server_block)
 
 void	Nginx::putServerFdIntoFdPool(serverMap::iterator server_block)
 {
-	FT_FD_SET(server_block->second.getFd(), &(this->reads));
-	FT_FD_SET(server_block->second.getFd(), &(this->errors));
+	this->fd_sets.addToReadSet(server_block->second.getFd());
+	this->fd_sets.addToErrorSet(server_block->second.getFd());
+	// FT_FD_SET(server_block->second.getFd(), &(this->reads));
+	// FT_FD_SET(server_block->second.getFd(), &(this->errors));
 
 	this->fd_pool[server_block->second.getFd()] = &(server_block->second);
 
@@ -260,37 +183,95 @@ void	Nginx::putServerFdIntoFdPool(serverMap::iterator server_block)
 }
 
 // run()'s
-bool	Nginx::isIndexOfReadFdSet(int index, fd_set &reads)
+
+int				Nginx::selectReadyFd(Fdsets &fd_sets)
 {
-	if (FT_FD_ISSET(index, &reads) && (this->fd_pool[index] != NULL))
+	struct timeval		select_timeout;
+
+	select_timeout.tv_sec = 5; // last request time out 5000ms
+	select_timeout.tv_usec = 0;
+
+	int ready_fd_num;
+	ready_fd_num = select(this->fd_max + 1, &fd_sets.getReadFdSet(), &fd_sets.getWriteFdSet(), &fd_sets.getErrorFdSet(), &select_timeout);
+	if (ready_fd_num == -1)
+	{
+		std::cout << "select return -1" << std::endl;
+			throw strerror(errno);
+	}
+	return (ready_fd_num);
+}
+
+void	Nginx::workWithReadyFds(Fdsets &fd_sets)
+{
+	for (int fd = 0; fd <= this->fd_max; fd++)
+	{
+		if (isReadyReadFd(fd, fd_sets))
+			doReadAlongFdType(fd);
+		else if (isReadyWriteFd(fd, fd_sets))
+			doWriteAlongFdType(fd);
+		else if (isReadyErrorFd(fd, fd_sets))
+		{
+			std::cout << "error socket : " << fd << " deleted" << std::endl;
+			deleteFromFdPool(this->fd_pool[fd]);
+		}
+	}
+}
+
+bool	Nginx::isReadyReadFd(int fd, Fdsets &fd_sets)
+{
+	if (fd_sets.fdIsInReadFdSet(fd) && (this->fd_pool[fd] != NULL))
 		return (true);
 	else
 		return (false);
 }
 
-bool	Nginx::isIndexOfWriteFdSet(int index, fd_set &writes)
+bool	Nginx::isReadyWriteFd(int fd, Fdsets &fd_sets)
 {
-	if (FT_FD_ISSET(index, &writes) && (this->fd_pool[index] != NULL))
+	if (fd_sets.fdIsInWriteFdSet(fd) && (this->fd_pool[fd] != NULL))
 		return (true);
 	else
 		return (false);
 }
 
-bool	Nginx::isIndexOfErrorFdSet(int index, fd_set &errors)
+bool	Nginx::isReadyErrorFd(int fd, Fdsets &fd_sets)
 {
-	if (FT_FD_ISSET(index, &errors) && (this->fd_pool[index] != NULL))
+	if (fd_sets.fdIsInErrorFdSet(fd) && (this->fd_pool[fd] != NULL))
 		return (true);
 	else
 		return (false);
 }
 
-void	Nginx::doReadServerFd(int i)
+void	Nginx::doReadAlongFdType(int fd)
 {
-	Server *server = dynamic_cast<Server *>(this->fd_pool[i]);
+	switch (this->fd_pool[fd]->getType())
+	{
+	case FD_SERVER:
+	{
+		doReadServerFd(fd);
+		break;
+	}
+	case FD_CLIENT:
+	{
+		doReadClientFD(fd);
+		break ;
+	}
+	case FD_RESOURCE:  // read 다 -> 적혀있는 타겟 클라이언트 response 에 적어주면 된다.
+	{
+		doReadResourceFD(fd);
+		break ;
+	}
+	default:
+		break;
+	}
+}
+
+void	Nginx::doReadServerFd(int fd)
+{
+	Server *server = dynamic_cast<Server *>(this->fd_pool[fd]);
 	struct sockaddr_in  client_addr;
 	socklen_t			addr_size = sizeof(client_addr);
 
-	int client_socket = accept(i, (struct sockaddr*)&client_addr, &addr_size);
+	int client_socket = accept(fd, (struct sockaddr*)&client_addr, &addr_size);
 
 	Client* temp_client = new Client(server, client_socket);
 	temp_client->setLastRequestMs(ft_get_time());
@@ -298,23 +279,23 @@ void	Nginx::doReadServerFd(int i)
 	insertToFdpool(temp_client);
 }
 
-void	Nginx::doReadClientFD(int i)
+void	Nginx::doReadClientFD(int fd)
 {
-	Client *client = dynamic_cast<Client *>(this->fd_pool[i]);
+	Client *client = dynamic_cast<Client *>(this->fd_pool[fd]);
 	int		len;
 	char	buf[BUFFER_SIZE + 1];
 
 	client->setLastRequestMs(ft_get_time());
-	len = read(i, buf, BUFFER_SIZE);
+	len = read(fd, buf, BUFFER_SIZE);
 	if (len <= 0)
 	{
 		if (len == 0)
 		{
-			std::cout << "Client : " << i << " read 0 || ";
+			std::cout << "Client : " << fd << " read 0 || ";
 			deleteFromFdPool(client);
 		}
 		else
-			std::cout << "Client : " << i << " read minus" << std::endl;
+			std::cout << "Client : " << fd << " read minus" << std::endl;
 	}
 	else
 	{
@@ -322,25 +303,16 @@ void	Nginx::doReadClientFD(int i)
 		client->getRequest().getRawRequest() += buf; // 무조건 더한다. (다음 리퀘스트가 미리 와있을 수 있다.)
 	 	if ((client->getStatus() == REQUEST_RECEIVING) && (client->getRequest().tryMakeRequest() == true))
 		{
-			//request 로깅
-			// std::cout << "************************| "<< i << " | "<< "REQUEST ********************************" << std::endl;
-			// std::cout << client->getRequest().getMethod() << " " << client->getRequest().getUri() << " " << client->getRequest().getHttpVersion() << std::endl;
-			// for (std::map<std::string, std::string>::iterator iter = client->getRequest().getHeaders().begin(); iter != client->getRequest().getHeaders().end(); iter++)
-			// 	std::cout << "[" << iter->first << "] value = [" << iter->second << "]" << std::endl;
-			// std::cout << "**************************** REQUEST END **********************************" << std::endl;
-			//
-
-
 			client->setStatus(RESPONSE_MAKING);
 	 		client->getResponse().makeResponse();
 		}
 	}
 }
 
-void	Nginx::doReadResourceFD(int i)
+void	Nginx::doReadResourceFD(int fd)
 {
 	int len;
-	Resource *resource = dynamic_cast<Resource *>(this->fd_pool[i]);
+	Resource *resource = dynamic_cast<Resource *>(this->fd_pool[fd]);
 	char	buf[BUFFER_SIZE + 1];
 
 	switch (resource->isReady())
@@ -375,6 +347,26 @@ void	Nginx::doReadResourceFD(int i)
 		break ;
 	}
 }
+
+void	Nginx::doWriteAlongFdType(int fd)
+{
+	switch (this->fd_pool[fd]->getType())
+	{
+	case FD_CLIENT:
+	{
+		doWriteClientFD(fd);
+		break;
+	}
+	case FD_RESOURCE:
+	{
+		doWriteResourceFD(fd);
+		break ;
+	}
+	default:
+		break;
+	}
+}
+
 
 void	Nginx::doWriteClientFD(int i)
 {

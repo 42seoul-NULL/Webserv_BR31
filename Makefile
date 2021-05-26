@@ -17,6 +17,7 @@ SRCNAME	=	client.cpp\
 			response_cgi.cpp\
 			response.cpp\
 			server.cpp\
+			fdsets.cpp
 
 SRCDIR = ./srcs/
 SRCS = $(addprefix $(SRCDIR), $(SRCNAME))
@@ -29,7 +30,7 @@ LIB_NAME = libft.a
 
 CC = clang++
 
-#CFLAGS = -Wall -Wextra -Werror -fsanitize=address -g3 -std=c++98 
+#CFLAGS = -Wall -Wextra -Werror -fsanitize=address -g3 -std=c++98
 CFLAGS = -Wall -Wextra -Werror -std=c++98
 DCFLAGS = -g $(SRCS)
 
