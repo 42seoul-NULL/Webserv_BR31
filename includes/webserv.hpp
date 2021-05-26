@@ -391,19 +391,42 @@ class Client	:	public Fdmanager
 		int		getFdWrite();
 };
 
+//////////////// Fdset ///////////////
+class Fdsets
+{
+	private :
+		fd_set	read_fd_set;
+		fd_set	write_fd_set;
+		fd_set	error_fd_set;
+	public :
+		Fdsets();
+		virtual	~Fdsets();
+		Fdsets	&operator=(Fdsets &rvalue);
+
+		fd_set&	getReadFdSet();
+		fd_set&	getWriteFdSet();
+		fd_set&	getErrorFdSet();
+
+		void			addToReadSet(int fd);
+		void			addToWriteSet(int fd);
+		void			addToErrorSet(int fd);
+		void			deleteFd(int fd);
+
+		bool			fdIsInReadFdSet(int fd);
+		bool			fdIsInWriteFdSet(int fd);
+		bool			fdIsInErrorFdSet(int fd);
+};
+
 ////////////////// Nginx ////////////////
 class Nginx
 {
 	private :
-		fd_set	reads;
-		fd_set	writes;
-		fd_set	errors;
-
+		Fdsets	fd_sets;
 		int		fd_max;
 		std::vector<Fdmanager *> fd_pool;  /// 모든 fd pool (Server, Client, Resource가 담긴다.)
 		size_t	connection_time_out;
-		typedef std::map<std::string, Server> serverMap;
 
+		typedef std::map<std::string, Server> serverMap;
 	public	:
 		// 생정자 & 소멸자
 		Nginx();
@@ -422,14 +445,19 @@ class Nginx
 		void	turnOnServerFD(serverMap::iterator server_block);
 		void	putServerFdIntoFdPool(serverMap::iterator server_block);
 		// run()'s
-		bool	isIndexOfReadFdSet(int index, fd_set &reads);
-		bool	isIndexOfWriteFdSet(int index, fd_set &writes);
-		bool	isIndexOfErrorFdSet(int index, fd_set &errors);
-		void	doReadServerFd(int i);
-		void	doReadClientFD(int i);
-		void	doReadResourceFD(int i);
-		void	doWriteClientFD(int i);
-		void	doWriteResourceFD(int i);
+		int		selectReadyFd(Fdsets &fd_sets);
+		void	workWithReadyFds(Fdsets &fd_sets);
+		bool	isReadyReadFd(int fd, Fdsets &fd_sets);
+		bool	isReadyWriteFd(int fd, Fdsets &fd_sets);
+		bool	isReadyErrorFd(int fd, Fdsets &fd_sets);
+		void	doReadAlongFdType(int fd);
+		void	doReadServerFd(int fd);
+		void	doReadClientFD(int fd);
+		void	doReadResourceFD(int fd);
+
+		void	doWriteAlongFdType(int fd);
+		void	doWriteClientFD(int fd);
+		void	doWriteResourceFD(int fd);
 
 
 };
