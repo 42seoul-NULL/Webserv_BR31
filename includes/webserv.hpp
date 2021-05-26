@@ -283,6 +283,9 @@ class Response
 		size_t	write_index;
 		std::list<Resource *> resources;
 
+		int		fd_read;
+		int		fd_write;
+
 	public :
 		Response(void);
 		virtual ~Response(void);
@@ -353,8 +356,6 @@ class Response
 		//response_delete
 		void		makeDeleteResponse();
 
-
-
 		// char	**makeEnv();
 };
 
@@ -368,9 +369,6 @@ class Client	:	public Fdmanager
 		Response		response;
 		unsigned long	last_request_ms;
 
-		int				fd_read;
-		int				fd_write;
-
 		Client();
 	public	:
 		//생성자와 소멸자
@@ -380,8 +378,6 @@ class Client	:	public Fdmanager
 		//setter
 		void		setStatus(e_client_status status);
 		void		setLastRequestMs(unsigned long last_request_ms);
-		void		setFdRead(int fd_read);
-		void		setFdWrite(int fd_write);
 
 		//getter
 		Server *	getServer();
@@ -389,8 +385,6 @@ class Client	:	public Fdmanager
 		Response		&getResponse();
 		e_client_status	getStatus();
 		unsigned long getLastRequestMs();
-		int		getFdRead();
-		int		getFdWrite();
 };
 
 //////////////// Fdset ///////////////

@@ -79,14 +79,14 @@ void	Response::makeCgiResponse()
 
 		if ( (pipe(fds)) == -1 )  // fds[0] -> read ,   fds[1] -> write
 			return (makeErrorResponse(500));
-		this->client->setFdRead(fds[0]);
-		this->client->setFdWrite(fds[1]);
+		this->fd_read = fds[0];
+		this->fd_write = fds[1];
 
 		fcntl(fds[1], F_SETFL, O_NONBLOCK);
 		setResource(fds[1], RAW_DATA_TO_FD, MAKE_RESPONSE, -1);
 
 		mkdir("./temp", 0777);
-		std::string temp_file_name = "./temp/tempfile_" + ft_itoa(this->client->getFdRead());
+		std::string temp_file_name = "./temp/tempfile_" + ft_itoa(this->fd_read);
 		int fd_temp = open(temp_file_name.c_str(), O_CREAT | O_TRUNC | O_RDWR, 0666);
 
 		if (fd_temp == -1)
@@ -94,8 +94,8 @@ void	Response::makeCgiResponse()
 		int pid = fork();
 		if (pid == 0)
 		{
-			close(client->getFdWrite());
-			dup2(client->getFdRead(), 0);
+			close(this->fd_write);
+			dup2(this->fd_read, 0);
 			dup2(fd_temp, 1);
 
 			char *args[3];
@@ -107,7 +107,7 @@ void	Response::makeCgiResponse()
 
 			int ret;
 			ret = execve(args[0], args, cgi_env);
-			close(client->getFdRead());
+			close(this->fd_read);
 			exit(ret);
 		}
 		else if (pid < 0) // fork error
@@ -125,8 +125,7 @@ void	Response::makeCgiResponse()
 	}
 	case FILE_READ_DONE:
 	{
-		close(client->getFdRead());
-		//close(client->getFdWrite());
+		close(this->fd_read);
 		try
 		{
 			std::string first_line;
