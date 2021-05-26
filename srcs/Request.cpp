@@ -15,7 +15,6 @@ void	Request::initRequest(void)
 	this->http_version.clear();
 	this->headers.clear();
 	this->raw_body.clear();
-	this->temp_body.clear();
 	this->status = HEADER_PARING;
 	this->remain_body_value = 0;
 }
@@ -59,8 +58,8 @@ bool			Request::tryMakeRequest(void)
 	{
 		if (this->remain_body_value <= this->raw_request.size()) // 충분히 잘라낼만큼 있다.
 		{
-			this->raw_body += this->raw_request.substr(0, this->remain_body_value);
-			this->raw_request = this->raw_request.substr(this->remain_body_value);
+			this->raw_body.append(this->raw_request, 0, this->remain_body_value);
+			this->raw_request.erase(0, this->remain_body_value);
 			this->remain_body_value = 0;
 			return (requestValidCheck(true));
 		}
@@ -93,8 +92,9 @@ bool			Request::tryMakeRequest(void)
 		if (this->remain_body_value <= this->raw_request.size()) // 충분히 잘라낼만큼 있다. // (뒤에있는 \r\n 까지)
 		{
 			size_t temp_size = this->raw_body.size();
-			this->raw_body += this->raw_request.substr(0, this->remain_body_value - 2); // 뒤에있는 \r\n 제외하고 끊어내준다.
-			this->raw_request = this->raw_request.substr(this->remain_body_value); // 뒤에있는 \r\n 까지 끊어준다.
+			this->raw_body.append(this->raw_request, 0, this->remain_body_value - 2); // 뒤에있는 \r\n 제외하고 끊어내준다.
+			this->raw_request.erase(0, this->remain_body_value); // 뒤에있는 \r\n 까지 끊어준다.
+
 			this->remain_body_value = 0;
 			if (this->raw_body.size() == temp_size) // 0 chunked 였다.
 				return (requestValidCheck(true));
@@ -271,6 +271,13 @@ bool	Request::isValidAuthHeader(Location &loc)
 	return (true);
 }
 
+bool	Request::isValidRequestMaxBodySize(Location &loc)
+{
+	if (this->raw_body.size() > (size_t)(loc.getRequestMaxBodySize()))
+		return (false);
+	return (true);
+}
+
 bool	Request::isValidMethod(Location &loc)
 {
 	bool isAllowCheckOkay = false;
@@ -293,7 +300,6 @@ bool	Request::requestValidCheck(bool isComplete)
 		return (false);
 	else
 	{
-		
 		Location &loc = this->client->getServer()->getPerfectLocation(this->uri);
 		//set response location
 		this->client->getResponse().setLocation(&loc);
@@ -312,7 +318,13 @@ bool	Request::requestValidCheck(bool isComplete)
 			this->client->getResponse().makeErrorResponse(405);
 			return (false);
 		}
-
+		//request_max_body_size
+		if (isValidRequestMaxBodySize(loc) == false)
+		{
+			this->client->setStatus(RESPONSE_MAKING);
+			this->client->getResponse().makeErrorResponse(413);
+			return (false);
+		}
 		//set response resource_path
 		std::string resource_path = loc.getRoot() + this->uri.substr(loc.getUriKey().size());
 		this->client->getResponse().setResourcePath(resource_path);
@@ -326,7 +338,6 @@ bool	Request::requestValidCheck(bool isComplete)
 				break ;
 			}
 		}
-
 		//set is_redirection
 		if (loc.getRedirectReturn() != -1)
 			this->client->getResponse().setIsRedirection(true);

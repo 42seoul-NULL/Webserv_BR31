@@ -248,9 +248,11 @@ bool	Config::makeConfig(const char *path)
 				iter++; // 8080
 				std::string port = *iter;
 				iter++; // 127.0.0.1
-				key = server_name + ":" + port;
+				key = *iter + ":" + port;
 				if (instance->server_blocks.find(key) != instance->server_blocks.end()) // 이미 존재
 					throw "server_name and port already exists";
+				if (server_name == "NONE")
+					server_name = "";
 				instance->server_blocks[key].setServerName(server_name);
 				instance->server_blocks[key].setPort(ft_atoi(port));
 				instance->server_blocks[key].setIP(*iter);

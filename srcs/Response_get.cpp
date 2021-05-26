@@ -10,12 +10,6 @@ void		Response::makeGetResponse()
 	//FILE_WRITE_DONE,
 	//RESPONSE_MAKE_DONE
 
-    if ((this->client->getRequest().getMethod() == "POST") && (this->client->getRequest().getRawBody().size() > (size_t)(this->location->getRequestMaxBodySize())  ))
-    {
-        makeErrorResponse(413);
-        return ;        
-    }
-
     switch (this->client->getStatus())
     {
     case RESPONSE_MAKING:

@@ -17,6 +17,7 @@
 # include <sys/stat.h>
 # include <dirent.h>
 # include <signal.h>
+# include <limits.h>
 //error
 #include <string.h>
 #include <errno.h>
@@ -226,7 +227,6 @@ class Request
 		std::string	http_version;
 		std::map<std::string, std::string> headers;
 		std::string	raw_body;
-		std::string temp_body;
 
 		e_request_status	status;
 
@@ -265,6 +265,7 @@ class Request
 
 		bool		isValidAuthHeader(Location &loc);
 		bool		isValidMethod(Location &loc);
+		bool		isValidRequestMaxBodySize(Location &loc);
 };
 
 /////////////////////////// Response //////////////////////////
@@ -319,6 +320,7 @@ class Response
 		int		addContentLocation();
 		int		addContentType(const std::string &mime_type);
 		int		addDate();
+		int		addDate(std::string &target);
 		int		addLastModified();
 		int		addLocation();
 		int		addRetryAfter();

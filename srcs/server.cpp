@@ -120,7 +120,7 @@ void		Server::show()
 
 /////////////////////////////////////////////////////////
 ///////////////// class Location start //////////////////
-Location::Location() : request_max_body_size(-1), redirect_return(-1)
+Location::Location() : request_max_body_size(INT_MAX), redirect_return(-1)
 {
 	
 }
