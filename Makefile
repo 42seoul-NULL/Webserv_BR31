@@ -67,6 +67,9 @@ test1 : all
 	-./tests/tester_bin/tester http://localhost:$(TEST1_PORT)
 	killall -2 $(NAME)
 
+test2 : all
+	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config &> testlog
+
 ##############################
 
-.PHONY : all clean fclean re dbg test1
+.PHONY : all clean fclean re dbg test1 test2
