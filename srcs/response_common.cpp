@@ -208,6 +208,19 @@ int		Response::addDate()
 	return (200);
 }
 
+int		Response::addDate(std::string &target)
+{
+	time_t t;
+	char buffer[256];
+	struct tm* timeinfo;
+
+	t = time(NULL);
+	timeinfo = gmtime(&t);
+	strftime(buffer, 256, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+	target += "Date: " + std::string(buffer) + "\r\n";
+	return (200);
+}
+
 int		Response::addLastModified()
 {
 	struct stat	sb;

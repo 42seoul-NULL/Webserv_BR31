@@ -60,6 +60,8 @@ TESTS_DIR = ./tests/
 TEST1 = test1_tester
 TEST1_PORT = 8080
 
+TEST2 = sample
+
 run : all
 	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config
 test1 : all
@@ -68,7 +70,7 @@ test1 : all
 	killall -2 $(NAME)
 
 test2 : all
-	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config &> testlog
+	./$(NAME) $(TESTS_DIR)$(TEST2)/$(TEST2).config &> testlog
 
 ##############################
 
