@@ -10,10 +10,17 @@ Response::Response(void)
 	this->write_index = 0;
 	this->resources.clear();
 	this->is_disconnect_immediately = false;
+	this->fd_read = -1;
+	this->fd_write = -1;
 }
 
 Response::~Response()
 {
+	if (this->fd_read != -1)
+		close(this->fd_read);
+	if (this->fd_write != -1)
+		close(this->fd_write);
+
 	for (std::list<Resource *>::iterator iter = this->resources.begin(); iter != this->resources.end(); iter++)
 	{
 		(*iter)->setClient(NULL);

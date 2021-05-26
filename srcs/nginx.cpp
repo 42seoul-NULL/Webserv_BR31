@@ -375,6 +375,7 @@ void	Nginx::doWriteClientFD(int i)
 		deleteFromFdPool(client);
 		return ;
 	}
+
 	if (client->getStatus() == RESPONSE_MAKE_DONE)
 	{
 		Response	&response = client->getResponse();

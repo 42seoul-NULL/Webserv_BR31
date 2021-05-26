@@ -9,8 +9,8 @@ void	Response::initResponse(void)
 	this->location = NULL;
 	this->write_index = 0;
 	this->resources.clear();
-	this->client->setFdRead(-1);
-	this->client->setFdWrite(-1);
+	this->fd_read = -1;
+	this->fd_write = -1;
 	this->is_disconnect_immediately = false;
 }
 
@@ -33,7 +33,6 @@ void	Response::makeResponse()
 	else if (this->client->getRequest().getMethod() == "DELETE")
 		makeDeleteResponse();
 }
-
 
 void	Response::makeErrorResponse(int error)
 {
