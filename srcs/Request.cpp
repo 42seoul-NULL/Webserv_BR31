@@ -273,8 +273,6 @@ bool	Request::isValidAuthHeader(Location &loc)
 
 bool	Request::isValidRequestMaxBodySize(Location &loc)
 {
-	if (loc.getRequestMaxBodySize() == -1)
-		return (true);
 	if (this->raw_body.size() > (size_t)(loc.getRequestMaxBodySize()))
 		return (false);
 	return (true);

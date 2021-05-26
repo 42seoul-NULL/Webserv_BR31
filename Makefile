@@ -47,7 +47,7 @@ re : fclean all
 
 dbg : $(SRCS)
 	$(CC) $(DCFLAGS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)
-	lldb webserv -- tests/test1_tester/test1_tester.config
+	lldb webserv -- tests/sample/sample.config
 
 $(NAME) : $(LIB_DIR)$(LIB_NAME) $(SRCS)
 	$(CC) $(CFLAGS) $(SRCS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)
@@ -70,8 +70,13 @@ test1 : all
 	killall -2 $(NAME)
 
 test2 : all
-	./$(NAME) $(TESTS_DIR)$(TEST2)/$(TEST2).config &> testlog
+	./$(NAME) $(TESTS_DIR)$(TEST2)/$(TEST2).config
 
 ##############################
+
+# 시즈 명령어
+
+# siege -R <(echo connection = keep-alive) -c10 http://localhost:8080
+
 
 .PHONY : all clean fclean re dbg test1 test2

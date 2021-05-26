@@ -17,6 +17,7 @@
 # include <sys/stat.h>
 # include <dirent.h>
 # include <signal.h>
+# include <limits.h>
 //error
 #include <string.h>
 #include <errno.h>
