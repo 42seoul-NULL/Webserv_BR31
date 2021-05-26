@@ -391,6 +391,10 @@ class Client	:	public Fdmanager
 		unsigned long getLastRequestMs();
 		int		getFdRead();
 		int		getFdWrite();
+
+		void	appendRawRequest(const char *buf);
+		bool	tryMakeRequest();
+		void	makeResponse();
 };
 
 //////////////// Fdset ///////////////
@@ -427,6 +431,7 @@ class Nginx
 		int		fd_max;
 		std::vector<Fdmanager *> fd_pool;  /// 모든 fd pool (Server, Client, Resource가 담긴다.)
 		size_t	connection_time_out;
+		char	buf[BUFFER_SIZE + 1];
 
 		typedef std::map<std::string, Server> serverMap;
 	public	:

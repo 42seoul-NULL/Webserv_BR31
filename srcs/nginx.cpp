@@ -150,32 +150,30 @@ void	Nginx::setConnectionTimeOut(size_t connection_time_out)
 void	Nginx::turnOnServerFD(serverMap::iterator server_block)
 {
 	struct sockaddr_in  server_addr;
-		server_block->second.setFd(socket(PF_INET, SOCK_STREAM, 0));
-		int option = 1;
-		setsockopt(server_block->second.getFd(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
-		ft_memset(&server_addr, 0, sizeof(server_addr));
-		server_addr.sin_family = AF_INET;
-		server_addr.sin_addr.s_addr = inet_addr(server_block->second.getIP().c_str());
-		server_addr.sin_port = ft_htons(server_block->second.getPort());
+	server_block->second.setFd(socket(PF_INET, SOCK_STREAM, 0));
+	int option = 1;
+	setsockopt(server_block->second.getFd(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
-		if (bind(server_block->second.getFd(), (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
-		{
-			std::cerr << "bind() error" << std::endl;
-			throw strerror(errno);
-		}
-		if (listen(server_block->second.getFd(), CLIENT_QUE_SIZE) == -1)
-			throw strerror(errno);
-		std::cout << "Server " << server_block->second.getServerName() << "(" << server_block->second.getIP() << ":" << server_block->second.getPort() << ") started" << std::endl;
+	ft_memset(&server_addr, 0, sizeof(server_addr));
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr.s_addr = inet_addr(server_block->second.getIP().c_str());
+	server_addr.sin_port = ft_htons(server_block->second.getPort());
+
+	if (bind(server_block->second.getFd(), (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1)
+	{
+		std::cerr << "bind() error" << std::endl;
+		throw strerror(errno);
+	}
+	if (listen(server_block->second.getFd(), CLIENT_QUE_SIZE) == -1)
+		throw strerror(errno);
+	std::cout << "Server " << server_block->second.getServerName() << "(" << server_block->second.getIP() << ":" << server_block->second.getPort() << ") started" << std::endl;
 }
 
 void	Nginx::putServerFdIntoFdPool(serverMap::iterator server_block)
 {
 	this->fd_sets.addToReadSet(server_block->second.getFd());
 	this->fd_sets.addToErrorSet(server_block->second.getFd());
-	// FT_FD_SET(server_block->second.getFd(), &(this->reads));
-	// FT_FD_SET(server_block->second.getFd(), &(this->errors));
-
 	this->fd_pool[server_block->second.getFd()] = &(server_block->second);
 
 	if (this->fd_max < server_block->second.getFd())
@@ -283,10 +281,9 @@ void	Nginx::doReadClientFD(int fd)
 {
 	Client *client = dynamic_cast<Client *>(this->fd_pool[fd]);
 	int		len;
-	char	buf[BUFFER_SIZE + 1];
 
 	client->setLastRequestMs(ft_get_time());
-	len = read(fd, buf, BUFFER_SIZE);
+	len = read(fd, this->buf, BUFFER_SIZE);
 	if (len <= 0)
 	{
 		if (len == 0)
@@ -299,12 +296,14 @@ void	Nginx::doReadClientFD(int fd)
 	}
 	else
 	{
-		buf[len] = 0;
-		client->getRequest().getRawRequest() += buf; // 무조건 더한다. (다음 리퀘스트가 미리 와있을 수 있다.)
-	 	if ((client->getStatus() == REQUEST_RECEIVING) && (client->getRequest().tryMakeRequest() == true))
+		this->buf[len] = 0;
+		client->appendRawRequest(this->buf);
+		// client->getRequest().getRawRequest() += this->buf; // 무조건 더한다. (다음 리퀘스트가 미리 와있을 수 있다.)
+	 	if ( client->getStatus() == REQUEST_RECEIVING
+		 && client->tryMakeRequest() == true )
 		{
 			client->setStatus(RESPONSE_MAKING);
-	 		client->getResponse().makeResponse();
+	 		client->makeResponse();
 		}
 	}
 }
@@ -313,17 +312,16 @@ void	Nginx::doReadResourceFD(int fd)
 {
 	int len;
 	Resource *resource = dynamic_cast<Resource *>(this->fd_pool[fd]);
-	char	buf[BUFFER_SIZE + 1];
 
 	switch (resource->isReady())
 	{
 	case READY:
 	{
-		len = read(resource->getFd(), buf, BUFFER_SIZE);
+		len = read(resource->getFd(), this->buf, BUFFER_SIZE);
 		if (len == -1)
 			return ;
-		buf[len] = 0;
-		resource->getRawData() += buf;
+		this->buf[len] = 0;
+		resource->getRawData() += this->buf;
 		if (len < BUFFER_SIZE) // 다읽었다.
 		{
 			resource->doNext();
@@ -379,25 +377,28 @@ void	Nginx::doWriteClientFD(int i)
 	}
 	if (client->getStatus() == RESPONSE_MAKE_DONE)
 	{
-		int len;
-		size_t w_idx = client->getResponse().getWriteIndex();
-		const char *current_str = client->getResponse().getRawResponse().c_str() + w_idx;
+		Response	&response = client->getResponse();
+		Request		&request = client->getRequest();
 
-		len = write(i, current_str, client->getResponse().getRawResponse().size() - w_idx);
+		int len;
+		size_t w_idx = response.getWriteIndex();
+		const char *current_str = response.getRawResponse().c_str() + w_idx;
+
+		len = write(i, current_str, response.getRawResponse().size() - w_idx);
 
 		if (len < 0)
 			return ;
 
-		if ((size_t) len < client->getResponse().getRawResponse().size() - w_idx) // 다 안쓰였다.
-			client->getResponse().setWriteIndex( w_idx + len );
+		if ((size_t) len < response.getRawResponse().size() - w_idx) // 다 안쓰였다.
+			response.setWriteIndex( w_idx + len );
 		else // 다쓰였다.
 		{
-			if (client->getResponse().getIsDisconnectImmediately())
+			if (response.getIsDisconnectImmediately())
 				deleteFromFdPool(client);
 			else
 			{
-				client->getRequest().initRequest();
-				client->getResponse().initResponse();
+				request.initRequest();
+				response.initResponse();
 				client->setStatus(REQUEST_RECEIVING);
 			}
 		}
