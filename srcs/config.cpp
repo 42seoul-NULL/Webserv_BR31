@@ -172,9 +172,9 @@ void	Config::setNginx(Nginx* nginx)
 	this->nginx = nginx;
 }
 
-std::map<std::string, Server> &Config::getServers()
+std::map<std::string, Server> &Config::getServerBlocks()
 {
-	return (this->servers);
+	return (this->server_blocks);
 }
 
 std::map<std::string, std::string> &Config::getMimeType()
@@ -194,12 +194,12 @@ Nginx 	*Config::getNginx()
 
 bool	Config::isReserved(const std::string &src)
 {
-	if (src == "server" || 
-		src == "listen" || 
-		src == "server_name" || 
-		src == "location" || 
-		src == "error_page" || 
-		src == "allow_methods" || 
+	if (src == "server" ||
+		src == "listen" ||
+		src == "server_name" ||
+		src == "location" ||
+		src == "error_page" ||
+		src == "allow_methods" ||
 		src == "root" ||
 		src == "index" ||
 		src == "upload_path" ||
@@ -249,33 +249,33 @@ bool	Config::makeConfig(const char *path)
 				std::string port = *iter;
 				iter++; // 127.0.0.1
 				key = *iter + ":" + port;
-				if (instance->servers.find(key) != instance->servers.end()) // 이미 존재
+				if (instance->server_blocks.find(key) != instance->server_blocks.end()) // 이미 존재
 					throw "server_name and port already exists";
 				if (server_name == "NONE")
 					server_name = "";
-				instance->servers[key].setServerName(server_name);
-				instance->servers[key].setPort(ft_atoi(port));
-				instance->servers[key].setIP(*iter);
+				instance->server_blocks[key].setServerName(server_name);
+				instance->server_blocks[key].setPort(ft_atoi(port));
+				instance->server_blocks[key].setIP(*iter);
 			}
 			else if (*iter == "location")
 			{
 				iter++;
 				location_name = *iter;
-				instance->servers[key].getLocations()[location_name].setUriKey(location_name);
+				instance->server_blocks[key].getLocations()[location_name].setUriKey(location_name);
 			}
 			else if (*iter == "error_page")
 			{
 				iter++;
 				int key2 = ft_atoi(*iter);
 				iter++;
-				instance->servers[key].getLocations()[location_name].getErrorPages()[key2] = *iter;
+				instance->server_blocks[key].getLocations()[location_name].getErrorPages()[key2] = *iter;
 			}
 			else if (*iter == "allow_methods")
 			{
 				iter++;
 				while (!isReserved(*iter) && iter != vec.end())
 				{
-					instance->servers[key].getLocations()[location_name].getAllowMethods().push_back(*iter);
+					instance->server_blocks[key].getLocations()[location_name].getAllowMethods().push_back(*iter);
 					iter++;
 				}
 				if (iter == vec.end())
@@ -285,14 +285,14 @@ bool	Config::makeConfig(const char *path)
 			else if (*iter == "root")
 			{
 				iter++;
-				instance->servers[key].getLocations()[location_name].setRoot(*iter);
+				instance->server_blocks[key].getLocations()[location_name].setRoot(*iter);
 			}
 			else if (*iter == "index")
 			{
 				iter++;
 				while (!isReserved(*iter) && iter != vec.end())
 				{
-					instance->servers[key].getLocations()[location_name].getIndex().push_back(*iter);
+					instance->server_blocks[key].getLocations()[location_name].getIndex().push_back(*iter);
 					iter++;
 				}
 				if (iter == vec.end())
@@ -302,20 +302,20 @@ bool	Config::makeConfig(const char *path)
 			else if (*iter == "upload_path")
 			{
 				iter++;
-				instance->servers[key].getLocations()[location_name].setUploadPath(*iter);
+				instance->server_blocks[key].getLocations()[location_name].setUploadPath(*iter);
 			}
 			else if (*iter == "auto_index")
 			{
 				iter++;
 				if (*iter == "on")
-					instance->servers[key].getLocations()[location_name].setAutoIndex(true);
+					instance->server_blocks[key].getLocations()[location_name].setAutoIndex(true);
 				else
-					instance->servers[key].getLocations()[location_name].setAutoIndex(false);
+					instance->server_blocks[key].getLocations()[location_name].setAutoIndex(false);
 			}
 			else if (*iter == "request_max_body_size")
 			{
 				iter++;
-				instance->servers[key].getLocations()[location_name].setRequestMaxBodySize(ft_atoi(*iter));
+				instance->server_blocks[key].getLocations()[location_name].setRequestMaxBodySize(ft_atoi(*iter));
 			}
 			else if (*iter == "cgi_info")
 			{
@@ -323,19 +323,19 @@ bool	Config::makeConfig(const char *path)
 				std::string key5 = *iter;
 				iter++;
 				std::string value5 = *iter;
-				instance->servers[key].getLocations()[location_name].getCgiInfos()[key5] = value5;
+				instance->server_blocks[key].getLocations()[location_name].getCgiInfos()[key5] = value5;
 			}
 			else if (*iter == "auth_key")
 			{
 				iter++;
-				instance->servers[key].getLocations()[location_name].setAuthKey(*iter);
+				instance->server_blocks[key].getLocations()[location_name].setAuthKey(*iter);
 			}
 			else if (*iter == "return")
 			{
 				iter++;
-				instance->servers[key].getLocations()[location_name].setRedirectReturn(ft_atoi(*iter));
+				instance->server_blocks[key].getLocations()[location_name].setRedirectReturn(ft_atoi(*iter));
 				iter++;
-				instance->servers[key].getLocations()[location_name].setRedirectAddr(*iter);				
+				instance->server_blocks[key].getLocations()[location_name].setRedirectAddr(*iter);
 			}
 		}
 	}
@@ -344,13 +344,13 @@ bool	Config::makeConfig(const char *path)
 		std::cout << e << std::endl;
 		return (false);
 	}
-	return (true);	
+	return (true);
 }
 
 //for test
 void		Config::show()
 {
-	for (std::map<std::string, Server>::iterator iter = this->servers.begin(); iter != this->servers.end(); iter++)
+	for (std::map<std::string, Server>::iterator iter = this->server_blocks.begin(); iter != this->server_blocks.end(); iter++)
 	{
 		std::cout << "server key : " << iter->first << std::endl;
 		iter->second.show();
