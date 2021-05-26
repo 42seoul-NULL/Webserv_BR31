@@ -126,31 +126,19 @@ void	Response::makeCgiResponse()
 	case FILE_READ_DONE:
 	{
 		close(this->fd_read);
-		try
-		{
-			std::string first_line;
-			size_t first_line_idx1 = this->raw_response.find("Status: ") + 8;
-			size_t first_line_idx2 = this->raw_response.find("\r\n", first_line_idx1);
-
-			first_line = "HTTP/1.1 " + this->raw_response.substr(first_line_idx1, first_line_idx2 - first_line_idx1) + "\r\n";
-
-			// add date//
-			addDate(first_line);
-			// add Content-Language //
-			first_line += "Content-Language: ko\r\n";
-
-			int content_size = this->raw_response.substr(this->raw_response.find("\r\n\r\n") + 4).size();
-
-			this->raw_response = first_line +
-								("Content-Length: " + ft_itoa(content_size) + "\r\n") +
-								this->raw_response;
-
-			this->client->setStatus(RESPONSE_MAKE_DONE);
-		}
-		catch(const std::exception& e)
-		{
-			return (makeErrorResponse(500));
-		}
+		std::string first_line;
+		
+		size_t first_line_idx1 = this->raw_response.find("Status: ") + 8;
+		size_t first_line_idx2 = this->raw_response.find("\r\n", first_line_idx1);
+		first_line = "HTTP/1.1 " + this->raw_response.substr(first_line_idx1, first_line_idx2 - first_line_idx1) + "\r\n";
+		// add date//
+		addDate(first_line);
+		// add Content-Language //
+		first_line += "Content-Language: ko\r\n";
+		int content_size = this->raw_response.substr(this->raw_response.find("\r\n\r\n") + 4).size();
+		first_line += ("Content-Length: " + ft_itoa(content_size) + "\r\n");
+		this->raw_response = (first_line + this->raw_response);
+		this->client->setStatus(RESPONSE_MAKE_DONE);
 		break ;
 	}
 	default:
