@@ -15,7 +15,6 @@ void	Request::initRequest(void)
 	this->http_version.clear();
 	this->headers.clear();
 	this->raw_body.clear();
-	this->temp_body.clear();
 	this->status = HEADER_PARING;
 	this->remain_body_value = 0;
 }
@@ -59,8 +58,8 @@ bool			Request::tryMakeRequest(void)
 	{
 		if (this->remain_body_value <= this->raw_request.size()) // 충분히 잘라낼만큼 있다.
 		{
-			this->raw_body += this->raw_request.substr(0, this->remain_body_value);
-			this->raw_request = this->raw_request.substr(this->remain_body_value);
+			this->raw_body.append(this->raw_request, 0, this->remain_body_value);
+			this->raw_request.erase(0, this->remain_body_value);
 			this->remain_body_value = 0;
 			return (requestValidCheck(true));
 		}
@@ -81,31 +80,23 @@ bool			Request::tryMakeRequest(void)
 			return (requestValidCheck(false)); //
 		else // 헤더있는줄
 		{
-			//std::cout << "idx : "<< idx << std::endl;
 			this->remain_body_value = ft_atoi_hex(this->raw_request.substr(0, idx)) + 2; // 실제 데이터 뒤에 있는 \r\n 까지.
-			std::cout << "chunked size : " << this->remain_body_value << std::endl;
 			this->raw_request = this->raw_request.substr(idx + 2); // "\r\n" 까지 모조리 없애준다.
 			this->status = CHUNKED_BODY_RECEVING;
-			//std::cout << "true :" << (this->raw_request == "\r\n") << std::endl;
 			return (tryMakeRequest());
 		}
 		break ;
 	}
 	case CHUNKED_BODY_RECEVING:
 	{
-		//std::cout << std::endl;
-		//std::cout << "remain_body : " << this->remain_body_value << std::endl;
-		//std::cout << "raw_request : " << this->raw_request << std::endl;
-		//std::cout << (this->raw_request == "\r\n") << std::endl;
-		//std::cout << "raw_request_size : " << this->raw_request.size() << std::endl;
 		if (this->remain_body_value <= this->raw_request.size()) // 충분히 잘라낼만큼 있다. // (뒤에있는 \r\n 까지)
 		{
-			std::string temp_raw_request = this->raw_request.substr(0, this->remain_body_value - 2); // 뒤에있는 \r\n 제외하고 끊어내준다.
-			this->raw_body += temp_raw_request;
+			size_t temp_size = this->raw_body.size();
+			this->raw_body.append(this->raw_request, 0, this->remain_body_value - 2); // 뒤에있는 \r\n 제외하고 끊어내준다.
+			this->raw_request.erase(0, this->remain_body_value); // 뒤에있는 \r\n 까지 끊어준다.
 
-			this->raw_request = this->raw_request.substr(this->remain_body_value); // 뒤에있는 \r\n 까지 끊어준다.
 			this->remain_body_value = 0;
-			if (temp_raw_request.size() == 0) // 0 chunked 였다.
+			if (this->raw_body.size() == temp_size) // 0 chunked 였다.
 				return (requestValidCheck(true));
 			this->status = CHUNKED_LENGTH_RECEIVING;
 			return (tryMakeRequest());
@@ -252,13 +243,6 @@ void	Request::makeRequestHeader(void)
 			value = temp.substr(found + 1);
 		headers[key] = value;
 	}
-
-	//맵 출력용
-	std::cout << this->method << " " << this->uri << " " << http_version << std::endl;
-	for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
-		std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
-	std::cout << std::endl;	
-
 	this->raw_request = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
 }
 
@@ -270,7 +254,7 @@ bool	Request::isValidAuthHeader(Location &loc)
 		ft_memset(result, 0, 200);
 
 		if (this->headers.find(AUTHORIZATION) == this->headers.end())  // auth key 헤더가 아예 안들어왔다.
-		{		
+		{
 			return (false);
 		}
 		else
@@ -284,6 +268,13 @@ bool	Request::isValidAuthHeader(Location &loc)
 			}
 		}
 	}
+	return (true);
+}
+
+bool	Request::isValidRequestMaxBodySize(Location &loc)
+{
+	if (this->raw_body.size() > (size_t)(loc.getRequestMaxBodySize()))
+		return (false);
 	return (true);
 }
 
@@ -327,7 +318,13 @@ bool	Request::requestValidCheck(bool isComplete)
 			this->client->getResponse().makeErrorResponse(405);
 			return (false);
 		}
-
+		//request_max_body_size
+		if (isValidRequestMaxBodySize(loc) == false)
+		{
+			this->client->setStatus(RESPONSE_MAKING);
+			this->client->getResponse().makeErrorResponse(413);
+			return (false);
+		}
 		//set response resource_path
 		std::string resource_path = loc.getRoot() + this->uri.substr(loc.getUriKey().size());
 		this->client->getResponse().setResourcePath(resource_path);
@@ -341,7 +338,6 @@ bool	Request::requestValidCheck(bool isComplete)
 				break ;
 			}
 		}
-
 		//set is_redirection
 		if (loc.getRedirectReturn() != -1)
 			this->client->getResponse().setIsRedirection(true);

@@ -17,6 +17,7 @@ SRCNAME	=	client.cpp\
 			response_cgi.cpp\
 			response.cpp\
 			server.cpp\
+			fdsets.cpp
 
 SRCDIR = ./srcs/
 SRCS = $(addprefix $(SRCDIR), $(SRCNAME))
@@ -28,6 +29,8 @@ LIB_DIR = ./libft_cpp/
 LIB_NAME = libft.a
 
 CC = clang++
+
+#CFLAGS = -Wall -Wextra -Werror -fsanitize=address -g3 -std=c++98
 CFLAGS = -Wall -Wextra -Werror -std=c++98
 DCFLAGS = -g $(SRCS)
 
@@ -45,7 +48,7 @@ re : fclean all
 
 dbg : $(SRCS)
 	$(CC) $(DCFLAGS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)
-	lldb webserv -- tests/test1_tester/test1_tester.config
+	lldb webserv -- tests/sample/sample.config
 
 $(NAME) : $(LIB_DIR)$(LIB_NAME) $(SRCS)
 	$(CC) $(CFLAGS) $(SRCS) -L$(LIB_DIR) -lft $(INCLUDE) -o $(NAME)
@@ -58,13 +61,23 @@ TESTS_DIR = ./tests/
 TEST1 = test1_tester
 TEST1_PORT = 8080
 
+TEST2 = sample
+
 run : all
 	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config
 test1 : all
-	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config > testlog &
+	./$(NAME) $(TESTS_DIR)$(TEST1)/$(TEST1).config &> testlog &
 	-./tests/tester_bin/tester http://localhost:$(TEST1_PORT)
-	killall $(NAME)
+	killall -2 $(NAME)
+
+test2 : all
+	./$(NAME) $(TESTS_DIR)$(TEST2)/$(TEST2).config
 
 ##############################
 
-.PHONY : all clean fclean re dbg test1
+# 시즈 명령어
+
+# siege -R <(echo connection = keep-alive) -c10 http://localhost:8080
+
+
+.PHONY : all clean fclean re dbg test1 test2

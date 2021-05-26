@@ -6,7 +6,6 @@ Client::Client()
 	this->fd = -1;
 	this->status = REQUEST_RECEIVING;
 	this->type = FD_CLIENT;
-	this->published_resource = NULL;
 }
 
 Client::Client(Server *server, int fd)
@@ -15,7 +14,6 @@ Client::Client(Server *server, int fd)
 	this->status = REQUEST_RECEIVING;
 	this->type = FD_CLIENT;
 	this->server = server;
-	this->published_resource = NULL;
 	this->request.setClient(this);
 	this->response.setClient(this);
 }
@@ -34,21 +32,6 @@ void	Client::setStatus(e_client_status status)
 {
 	this->status = status;
 	return ;
-}
-
-void		Client::setFdRead(int fd_read)
-{
-	this->fd_read = fd_read;
-}
-
-void		Client::setFdWrite(int fd_write)
-{
-	this->fd_write = fd_write;
-}
-
-void		Client::setPulishedResource(Resource *published_resource)
-{
-	this->published_resource = published_resource;
 }
 
 //getter
@@ -77,17 +60,17 @@ unsigned long	Client::getLastRequestMs()
 	return (this->last_request_ms);
 }
 
-int		Client::getFdRead()
+void	Client::appendRawRequest(const char *buf)
 {
-	return (this->fd_read);
+	this->request.getRawRequest() += buf;
 }
 
-int		Client::getFdWrite()
+bool	Client::tryMakeRequest()
 {
-	return (this->fd_write);
+	return (this->request.tryMakeRequest());
 }
 
-Resource *Client::getPulishedResource()
+void	Client::makeResponse()
 {
-	return (this->published_resource);
+	this->response.makeResponse();
 }

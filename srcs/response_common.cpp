@@ -7,6 +7,11 @@ void	Response::initResponse(void)
 	this->is_redirection = false;
 	this->cgi_extention.clear();
 	this->location = NULL;
+	this->write_index = 0;
+	this->resources.clear();
+	this->fd_read = -1;
+	this->fd_write = -1;
+	this->is_disconnect_immediately = false;
 }
 
 void	Response::makeResponse()
@@ -28,7 +33,6 @@ void	Response::makeResponse()
 	else if (this->client->getRequest().getMethod() == "DELETE")
 		makeDeleteResponse();
 }
-
 
 void	Response::makeErrorResponse(int error)
 {
@@ -111,7 +115,7 @@ void	Response::setResource(int fd, e_direction direction, e_nextcall nextcall, i
 										error_num
 									);
 	}
-	this->client->setPulishedResource(res);
+	this->resources.push_back(res);
 	Config::getInstance()->getNginx()->insertToFdpool(res);
 
 }
@@ -192,17 +196,27 @@ int		Response::addContentType(const std::string &extension)
 
 int		Response::addDate()
 {
-	// Date 함수 살펴 본 후 작성하자.
-	// 메시지가 만들어진 날짜, 객체 생성 시의 시간? 보내기 전 Raw화 하기전의 시간?
-	// juyang 의 유산
 	time_t t;
-	char buffer[4096];
+	char buffer[256];
 	struct tm* timeinfo;
 
 	t = time(NULL);
-	timeinfo = localtime(&t);
-	strftime(buffer, 4096, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+	timeinfo = gmtime(&t);
+	strftime(buffer, 256, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
 	this->raw_response += "Date: " + std::string(buffer) + "\r\n";
+	return (200);
+}
+
+int		Response::addDate(std::string &target)
+{
+	time_t t;
+	char buffer[256];
+	struct tm* timeinfo;
+
+	t = time(NULL);
+	timeinfo = gmtime(&t);
+	strftime(buffer, 256, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+	target += "Date: " + std::string(buffer) + "\r\n";
 	return (200);
 }
 

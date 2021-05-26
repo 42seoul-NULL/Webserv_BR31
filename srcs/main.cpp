@@ -1,5 +1,13 @@
 #include "webserv.hpp"
 
+void sigIntHandler(int sig)
+{
+	sig = 0;
+
+	std::cout << std::endl << ">> SIGINT CALLED <<" << std::endl;
+	Config::getInstance()->getNginx()->cleanUp();
+	exit(0);
+}
 
 int	main(int ac, char **av)
 {
@@ -12,17 +20,17 @@ int	main(int ac, char **av)
 
 	Nginx nginx;
 	Config::getInstance()->setNginx(&nginx);
-//	struct timeval		timeout;
+	nginx.setConnectionTimeOut(3000000);
 
-	// timeout.tv_sec = 5; // last request time out 5000ms
-	// timeout.tv_usec = 0;
 	try
 	{
 		nginx.initServers();
+		signal(SIGINT, sigIntHandler);
 		nginx.run();
 	}
 	catch(const char *e)
 	{
+		std::cerr << "main throw : ";
 		std::cerr << e << '\n';
 	}
 }

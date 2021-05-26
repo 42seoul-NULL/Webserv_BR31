@@ -6,6 +6,8 @@ Resource::Resource(int fd, std::string& raw_data, Client *client, e_direction di
 	this->pid = -1;
 	this->type = FD_RESOURCE;
 	this->is_seeked = false;
+	this->write_index = 0;
+	this->unlink_path.clear();
 }
 
 Resource::~Resource()
@@ -93,6 +95,16 @@ void		Resource::setUnlinkPath(const std::string &unlink_path)
 	this->unlink_path = unlink_path;
 }
 
+void		Resource::setWriteIndex(size_t write_index)
+{
+	this->write_index = write_index;
+}
+
+void		Resource::setClient(Client *client)
+{
+	this->client = client;
+}
+
 //////////////////////// getter ////////////////////////
 int			Resource::getPid()
 {
@@ -112,4 +124,9 @@ std::string &Resource::getRawData()
 Client		*Resource::getClient()
 {
 	return (this->client);
+}
+
+size_t		Resource::getWriteIndex()
+{
+	return (this->write_index);
 }

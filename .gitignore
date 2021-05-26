@@ -5,3 +5,5 @@
 **/webserv
 **/*.a
 **/*.o
+**/testlog
+multiple_same

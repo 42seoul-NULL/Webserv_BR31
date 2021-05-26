@@ -11,11 +11,17 @@
 # include <iostream>
 # include <arpa/inet.h>
 # include <sys/socket.h>
-# include <sys/time.h>
+# include <ctime>
 # include <sys/select.h>
 # include <errno.h>
 # include <sys/stat.h>
 # include <dirent.h>
+# include <signal.h>
+# include <limits.h>
+//error
+#include <string.h>
+#include <errno.h>
+
 
 # include "libft.hpp"
 # include "enums.hpp"
@@ -35,7 +41,6 @@ class Response;
 class Resource;
 class Location;
 class Server;
-class Nginx;
 
 ///////////////Config////////////////
 class Config
@@ -49,7 +54,7 @@ class Config
 
 		Nginx *nginx;
 
-		std::map<std::string, Server> servers;
+		std::map<std::string, Server> server_blocks;
 		static Config*	instance;
 		std::map<std::string, std::string> mime_type;
 		std::map<std::string, std::string> status_code;
@@ -66,7 +71,7 @@ class Config
 		void	setNginx(Nginx *nginx);
 
 		//getter
-		std::map<std::string, Server>& getServers();
+		std::map<std::string, Server>& getServerBlocks();
 		std::map<std::string, std::string>& getMimeType();
 		std::map<std::string, std::string>& getStatusCode();
 		Nginx	*getNginx();
@@ -183,6 +188,7 @@ class Resource	:	public Fdmanager
 		e_direction	direction;
 		e_nextcall	next_call;
 		int	response_error_num;
+		size_t		write_index;
 
 		int			pid;
 		bool		is_seeked;
@@ -200,12 +206,15 @@ class Resource	:	public Fdmanager
 		void		setResponseErrorNum(int response_error_num);
 		void		setPid(int pid);
 		void		setUnlinkPath(const std::string& unlink_path);
+		void		setWriteIndex(size_t write_index);
+		void		setClient(Client *client);
 
 		//getter
 		int			getPid();
 		const std::string &getUnlinkPath();
 		std::string &getRawData();
 		Client		*getClient();
+		size_t		getWriteIndex();
 };
 
 ////////////////// Request /////////////////////
@@ -218,7 +227,6 @@ class Request
 		std::string	http_version;
 		std::map<std::string, std::string> headers;
 		std::string	raw_body;
-		std::string temp_body;
 
 		e_request_status	status;
 
@@ -257,6 +265,7 @@ class Request
 
 		bool		isValidAuthHeader(Location &loc);
 		bool		isValidMethod(Location &loc);
+		bool		isValidRequestMaxBodySize(Location &loc);
 };
 
 /////////////////////////// Response //////////////////////////
@@ -271,6 +280,11 @@ class Response
 		Location *location;
 		std::string cgi_extention;
 		bool	is_redirection;
+		size_t	write_index;
+		std::list<Resource *> resources;
+
+		int		fd_read;
+		int		fd_write;
 
 	public :
 		Response(void);
@@ -279,13 +293,15 @@ class Response
 		//getter
 		bool		getIsDisconnectImmediately();
 		std::string&	getRawResponse(void);
-
+		size_t	getWriteIndex();
+		std::list<Resource *> &getResources();
 		//setter
 		void	setLocation(Location *location);
 		void	setClient(Client *client);
 		void	setResourcePath(const std::string &resource_path);
 		void	setCgiExtention(const std::string &cgi_extention);
 		void	setIsRedirection(bool is_redirection);
+		void	setWriteIndex(size_t index);
 
 		//response_common
 		void	initResponse(void);
@@ -307,6 +323,7 @@ class Response
 		int		addContentLocation();
 		int		addContentType(const std::string &mime_type);
 		int		addDate();
+		int		addDate(std::string &target);
 		int		addLastModified();
 		int		addLocation();
 		int		addRetryAfter();
@@ -339,8 +356,6 @@ class Response
 		//response_delete
 		void		makeDeleteResponse();
 
-
-
 		// char	**makeEnv();
 };
 
@@ -350,13 +365,9 @@ class Client	:	public Fdmanager
 	private	:
 		e_client_status		status;
 		Server	*		server;
-		Resource *		published_resource;
 		Request			request;
 		Response		response;
 		unsigned long	last_request_ms;
-
-		int				fd_read;
-		int				fd_write;
 
 		Client();
 	public	:
@@ -367,32 +378,56 @@ class Client	:	public Fdmanager
 		//setter
 		void		setStatus(e_client_status status);
 		void		setLastRequestMs(unsigned long last_request_ms);
-		void		setFdRead(int fd_read);
-		void		setFdWrite(int fd_write);
-		void		setPulishedResource(Resource *published_resource);
 
 		//getter
-		Resource *	getPulishedResource();
 		Server *	getServer();
 		Request		&getRequest();
 		Response		&getResponse();
 		e_client_status	getStatus();
 		unsigned long getLastRequestMs();
-		int		getFdRead();
-		int		getFdWrite();
+
+		void	appendRawRequest(const char *buf);
+		bool	tryMakeRequest();
+		void	makeResponse();
+};
+
+//////////////// Fdset ///////////////
+class Fdsets
+{
+	private :
+		fd_set	read_fd_set;
+		fd_set	write_fd_set;
+		fd_set	error_fd_set;
+	public :
+		Fdsets();
+		virtual	~Fdsets();
+		Fdsets	&operator=(Fdsets &rvalue);
+
+		fd_set&	getReadFdSet();
+		fd_set&	getWriteFdSet();
+		fd_set&	getErrorFdSet();
+
+		void			addToReadSet(int fd);
+		void			addToWriteSet(int fd);
+		void			addToErrorSet(int fd);
+		void			deleteFd(int fd);
+
+		bool			fdIsInReadFdSet(int fd);
+		bool			fdIsInWriteFdSet(int fd);
+		bool			fdIsInErrorFdSet(int fd);
 };
 
 ////////////////// Nginx ////////////////
 class Nginx
 {
 	private :
-		fd_set	reads;
-		fd_set	writes;
-		fd_set	errors;
-
+		Fdsets	fd_sets;
 		int		fd_max;
 		std::vector<Fdmanager *> fd_pool;  /// 모든 fd pool (Server, Client, Resource가 담긴다.)
+		size_t	connection_time_out;
+		char	buf[BUFFER_SIZE + 1];
 
+		typedef std::map<std::string, Server> serverMap;
 	public	:
 		// 생정자 & 소멸자
 		Nginx();
@@ -403,16 +438,28 @@ class Nginx
 		bool	run();
 		void	deleteFromFdPool(Fdmanager * fdmanager);
 		void 	insertToFdpool(Fdmanager *fdmanager);
+		void	cleanUp();
+		void	setConnectionTimeOut(size_t connection_time_out);
+
 	private :
+		// initServer()'s
+		void	turnOnServerFD(serverMap::iterator server_block);
+		void	putServerFdIntoFdPool(serverMap::iterator server_block);
 		// run()'s
-		bool	isIndexOfReadFdSet(int index, fd_set &reads);
-		bool	isIndexOfWriteFdSet(int index, fd_set &writes);
-		bool	isIndexOfErrorFdSet(int index, fd_set &errors);
-		void	doReadServerFd(int i);
-		void	doReadClientFD(int i);
-		void	doReadResourceFD(int i);
-		void	doWriteClientFD(int i);
-		void	doWriteResourceFD(int i);
+		int		selectReadyFd(Fdsets &fd_sets);
+		void	workWithReadyFds(Fdsets &fd_sets);
+		bool	isReadyReadFd(int fd, Fdsets &fd_sets);
+		bool	isReadyWriteFd(int fd, Fdsets &fd_sets);
+		bool	isReadyErrorFd(int fd, Fdsets &fd_sets);
+		void	doReadAlongFdType(int fd);
+		void	doReadServerFd(int fd);
+		void	doReadClientFD(int fd);
+		void	doReadResourceFD(int fd);
+
+		void	doWriteAlongFdType(int fd);
+		void	doWriteClientFD(int fd);
+		void	doWriteResourceFD(int fd);
+
 
 };
 

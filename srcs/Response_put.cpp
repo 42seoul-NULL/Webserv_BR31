@@ -34,20 +34,19 @@ void		Response::makePutResponse()
 					addFirstLine(201);
 					mkdirResourcePath();
 				}
-				int fd = open(this->resource_path.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0777);
-				if (fd < 0)
+				//int fd_temp = open(this->resource_path.c_str(), O_WRONLY | O_TRUNC, 0666);
+				int fd_temp = open(this->resource_path.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0777);
+
+				if (fd_temp < 0)
 				{
-					perror("here: ");
-				// std::cout << "fd: " << fd << std::endl;
-				// std::cout << this->resource_path << std::endl;
-					close(fd);
 					makeErrorResponse(500);
 					return ;
 				}
+
 				addDate();
 				addContentLength(0);
 				addEmptyline();
-				setResource(fd, RAW_DATA_TO_FD, MAKE_RESPONSE);
+				setResource(fd_temp, RAW_DATA_TO_FD, MAKE_RESPONSE);
 			}
 			break ;
 		}
@@ -70,7 +69,6 @@ int		Response::mkdirResourcePath()
 		copy_resource_path.erase(--copy_resource_path.end());
 	if (url.find(location->getUriKey()) != std::string::npos)
 		url = url.substr(location->getUriKey().length() - 1);
-	// std::cout << url << std::endl;
 	size_t offset = 0;
 	size_t idx = 0;
 	while(1)
@@ -78,9 +76,7 @@ int		Response::mkdirResourcePath()
 		if ((idx = url.find("/", offset + 1)) == std::string::npos)
 			break ;
 		copy_resource_path += url.substr(offset, idx - offset);
-		// std::cout << copy_resource_path << std::endl;
 		status = mkdir(copy_resource_path.c_str(), 0777);
-		// std::cout << "status: " << status << std::endl;
 		offset = idx;
 	}
 	return (0);
