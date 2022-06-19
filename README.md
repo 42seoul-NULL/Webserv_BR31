@@ -1,2 +1,2 @@
 # Webserv_
-현스키 짱짱맨
+mini multiplexing web server
